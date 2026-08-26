@@ -138,10 +138,10 @@ h1#ttl{font-family:var(--f-disp);font-size:19px;font-weight:700;letter-spacing:-
 .r-add:hover{color:var(--accent);background:var(--bg4)}
 
 /* ---------- player bar ---------- */
-#bar{position:fixed;bottom:0;left:0;right:0;height:var(--bar-h);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr minmax(300px,42%) 1fr;align-items:center;gap:16px;padding:0 18px;z-index:70}
+#bar{position:fixed;bottom:0;left:0;right:0;height:var(--bar-h);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(230px,1fr) minmax(280px,38%) minmax(210px,1fr);align-items:center;gap:14px;padding:0 16px;z-index:70}
 .np{display:flex;align-items:center;gap:12px;min-width:0}
 .np img,.np .ph{width:56px;height:56px;border-radius:7px;object-fit:cover;background:var(--bg4);flex:none;display:grid;place-items:center;font-size:22px}
-.np-m{min-width:0}
+.np-m{min-width:0;flex:1 1 auto;overflow:hidden}
 .np-m b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .np-m span{display:block;font-size:11.5px;color:var(--fg2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pc{display:flex;flex-direction:column;align-items:center;gap:7px}
@@ -170,16 +170,17 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border:0;border-radiu
 #seek::-webkit-slider-runnable-track{height:7px}
 #seek::-webkit-slider-thumb{width:19px;height:19px;margin-top:-6px}
 #seek::-moz-range-thumb{width:19px;height:19px}
-.pr{display:flex;align-items:center;justify-content:flex-end;gap:11px}
-.np .qb{margin-left:4px;flex:none}
+.pr{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+.np .qb{margin-left:6px;flex:0 0 auto}
+@media(max-width:1150px){.np .qb{display:none}}
 /* Some hosts pin their own badge to the bottom-right corner (Netlify's is 202x64
    at the maximum z-index) and it lands straight on the volume slider. When one is
    detected, clear a lane for it rather than letting it swallow the controls. */
 body.hostbadge .pr{padding-right:212px}
 .qb{font-family:var(--f-mono);font-size:9.5px;font-weight:600;letter-spacing:.4px;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--fg2);white-space:nowrap}
 .qb.loss{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-#vol{width:82px;flex:none}
-#viz{width:88px;height:34px;border-radius:6px;background:var(--bg3);cursor:pointer;flex:none}
+#vol{width:70px;flex:none}
+#viz{width:74px;height:32px;border-radius:6px;background:var(--bg3);cursor:pointer;flex:none}
 
 /* ---------- misc ---------- */
 .empty{text-align:center;padding:56px 20px;color:var(--fg2)}
@@ -315,15 +316,16 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
 #sugg .x{position:absolute;top:7px;right:9px;color:var(--fg3);font-size:11px;cursor:pointer;background:none;border:none}
 
 /* ---------- 4. station cards ---------- */
-.stn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
-.stn{display:flex;align-items:center;gap:11px;padding:11px;border-radius:11px;border:1px solid var(--line);
+.stn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:11px}
+.stn{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;border:1px solid var(--line);
   background:var(--bg2);cursor:pointer;text-align:left;transition:.15s;min-width:0}
 .stn:hover{background:var(--bg3);border-color:var(--accent)}
 .stn img,.stn .ph{width:42px;height:42px;border-radius:9px;object-fit:cover;flex:none;background:var(--bg4);
   display:grid;place-items:center;font-size:18px}
-.stn .m{min-width:0;flex:1}
+.stn .m{min-width:0;flex:1 1 auto;overflow:hidden}
 .stn .m b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stn .m span{display:block;font-size:10.5px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stn .qb{flex:0 0 auto;margin-left:auto}
 .stn.playing{border-color:var(--accent);background:var(--bg3)}
 .stn.playing .m b{color:var(--accent)}
 
@@ -419,7 +421,7 @@ body.drw-open #drawer{transform:none}
   border:1px solid var(--line);border-radius:9px;background:var(--bg3);font-size:12px}
 .geo-chip .pin{color:var(--accent)}
 .geo-link{margin-left:auto;color:var(--accent);font-size:11.5px}
-.pb.sm{font-size:13px;width:30px;height:30px;opacity:.6}
+.pb.sm{font-size:12px;width:26px;height:26px;opacity:.6;flex:none}
 .pb.sm:hover{opacity:1}
 .pb.sm.on{opacity:1;color:var(--accent)}
 .muted.small{font-size:11.5px;color:var(--fg2);line-height:1.6}
