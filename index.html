@@ -433,6 +433,34 @@ body.drw-open #drawer{transform:none}
   body.drw-open #drawer{transform:none}
   .pb.sm{display:none}
 }
+
+/* ---------- Neon-Logo (nachgebaut statt Bild: scharf auf jedem Display,
+     ~1 KB statt 284 KB Base64, und das Herz kann wirklich pulsieren) ---------- */
+.brand{display:block;padding:18px 16px 15px;line-height:1}
+.neon{display:block}
+.neon-main{font-family:var(--f-disp);font-weight:800;font-size:16.5px;letter-spacing:1.4px;
+  background:linear-gradient(90deg,#ff3b3b 0%,#ff9f1c 17%,#ffd93b 33%,#4ade80 50%,#38bdf8 67%,#8b5cf6 84%,#e879f9 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap;
+  filter:drop-shadow(0 0 5px rgba(255,120,60,.45)) drop-shadow(0 0 13px rgba(130,90,255,.32))}
+.neon-sub{font-family:'Snell Roundhand','Brush Script MT','Segoe Script','Bradley Hand',cursive;
+  font-style:italic;font-size:13px;color:#67e8f9;margin-top:4px;white-space:nowrap;
+  text-shadow:0 0 5px rgba(103,232,249,.8),0 0 13px rgba(34,211,238,.45)}
+.hz{display:inline-block;color:#ff2d55;font-style:normal;font-size:12px;vertical-align:baseline;
+  text-shadow:0 0 6px rgba(255,45,85,.95),0 0 15px rgba(255,45,85,.55);
+  animation:hzPuls 1.5s ease-in-out infinite;transform-origin:center}
+@keyframes hzPuls{
+  0%,100%{transform:scale(1)}
+  15%{transform:scale(1.34)}
+  30%{transform:scale(1.02)}
+  45%{transform:scale(1.22)}
+  60%{transform:scale(1)}
+}
+/* Neon lebt vom dunklen Grund - im hellen Theme das Leuchten zuruecknehmen,
+   sonst wird der Schriftzug milchig. */
+[data-theme="light"] .neon-main{filter:drop-shadow(0 1px 1px rgba(0,0,0,.18))}
+[data-theme="light"] .neon-sub{color:#0891b2;text-shadow:none}
+[data-theme="light"] .hz{text-shadow:none}
+@media(prefers-reduced-motion:reduce){.hz{animation:none}}
 </style>
 </head>
 <body class="u-manuel">
@@ -440,19 +468,11 @@ body.drw-open #drawer{transform:none}
 <div id="shell">
   <aside id="side">
     <div class="brand">
-      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
-        <defs><linearGradient id="lgGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent2)"/>
-        </linearGradient></defs>
-        <rect x="1.5" y="1.5" width="37" height="37" rx="11" fill="url(#lgGrad)"/>
-        <g fill="none" stroke="var(--accent-fg)" stroke-width="2.4" stroke-linecap="round">
-          <path d="M11 20 v-3"/><path d="M15.5 20 v-8"/><path d="M20 20 v-12"/>
-          <path d="M24.5 20 v-8"/><path d="M29 20 v-3"/>
-          <path d="M11 24 v3"/><path d="M15.5 24 v8"/><path d="M20 24 v12"/>
-          <path d="M24.5 24 v8"/><path d="M29 24 v3"/>
-        </g>
-      </svg>
-      <span>SOUNDMASCHINE</span></div>
+      <div class="neon">
+        <div class="neon-main">MUSIKMASCHINE</div>
+        <div class="neon-sub">f&uuml;r Maya <span class="hz">&#9829;</span> von Mani</div>
+      </div>
+    </div>
 
     <div class="usr">
       <div class="usr-seg" id="usrSeg"></div>
