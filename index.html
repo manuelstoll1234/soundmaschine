@@ -298,22 +298,24 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
 .fav-empty{font-size:11px;color:var(--fg3);padding:6px 9px;line-height:1.6}
 
 /* ---------- 8. suggestion bubble ---------- */
-#sugg{position:fixed;right:18px;bottom:calc(var(--bar-h) + 16px);width:290px;z-index:80;
-  background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:13px;
-  box-shadow:0 16px 44px rgba(0,0,0,.45);display:flex;gap:11px;align-items:flex-start;
-  opacity:0;transform:translateY(10px);pointer-events:none;transition:.28s}
+#sugg{position:fixed;right:16px;bottom:calc(var(--bar-h) + 12px);z-index:80;
+  width:auto;max-width:222px;background:var(--bg2);border:1px solid var(--line);border-radius:99px;
+  padding:5px 7px 5px 5px;box-shadow:0 8px 22px rgba(0,0,0,.4);display:flex;gap:7px;align-items:center;
+  opacity:0;transform:translateY(8px);pointer-events:none;transition:.24s}
 #sugg.on{opacity:1;transform:none;pointer-events:auto}
-#sugg .face{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-fg);font-size:17px}
-#sugg .sg{min-width:0;flex:1}
-#sugg .sg small{display:block;font-size:10px;color:var(--fg2);letter-spacing:.06em;text-transform:uppercase}
-#sugg .sg b{display:block;font-size:12.5px;margin:2px 0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sugg .sg i{display:block;font-style:normal;font-size:11px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sugg .acts{display:flex;gap:6px;margin-top:9px}
-#sugg .acts button{font-size:11px;padding:5px 11px;border-radius:99px;border:1px solid var(--line);
-  background:var(--bg3);color:var(--fg);cursor:pointer}
-#sugg .acts button.go{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
-#sugg .x{position:absolute;top:7px;right:9px;color:var(--fg3);font-size:11px;cursor:pointer;background:none;border:none}
+#sugg .face{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-fg);font-size:13px}
+#sugg .sg{min-width:0;flex:1;line-height:1.15}
+#sugg .sg b{display:block;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sugg .sg i{display:block;font-style:normal;font-size:9.5px;color:var(--fg2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sugg .ic{width:22px;height:22px;flex:none;border-radius:50%;border:none;background:none;cursor:pointer;
+  color:var(--fg2);font-size:10px;display:grid;place-items:center;transition:.13s}
+#sugg .ic:hover{color:var(--fg);background:var(--bg4)}
+#sugg .ic.go{background:var(--accent);color:var(--accent-fg);font-size:9px}
+#sugg .ic.go:hover{transform:scale(1.12)}
+#sugg .ic.x{font-size:9px;opacity:.55}
+@media(max-width:900px){#sugg{max-width:190px;right:12px;bottom:calc(var(--bar-h) + 8px)}}
 
 /* ---------- 4. station cards ---------- */
 .stn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:11px}
@@ -534,17 +536,14 @@ body.drw-open #drawer{transform:none}
      does send CORS, and is the only one wired to the analyser. -->
 <audio id="au" preload="none"></audio>
 <audio id="auX" crossorigin="anonymous" preload="none"></audio>
-<div id="sugg">
-  <button class="x" id="sugX" title="Ausblenden">✕</button>
+<div id="sugg" title="Vorschlag">
   <div class="face">◕</div>
   <div class="sg">
-    <small id="sugWhy">Vorschlag</small>
     <b id="sugT">—</b><i id="sugA">—</i>
-    <div class="acts">
-      <button class="go" id="sugGo">Abspielen</button>
-      <button id="sugNext">Anderer</button>
-    </div>
   </div>
+  <button class="ic go" id="sugGo" title="Abspielen">▶</button>
+  <button class="ic" id="sugNext" title="Anderer Vorschlag">⟳</button>
+  <button class="ic x" id="sugX" title="Ausblenden">✕</button>
 </div>
 <div id="toast"></div>
 <script>
@@ -1081,15 +1080,72 @@ var P = {
     else au.pause();
   },
 
+  /* Weiter/Zurueck. Wenn es keinen naechsten Titel gibt - letzter der Liste oder
+     ein einzeln angeklickter Song - wird Aehnliches nachgeladen, statt die Musik
+     einfach anzuhalten. Genau dann drueckt man die Taste ja. */
   step: function (d) {
     if (!this.queue.length) return;
-    var n;
-    if (this.shuffle) { n = Math.floor(Math.random() * this.queue.length); }
-    else { n = this.idx + d; }
+    var self = this;
+
+    /* Radio: durch die vorhandenen Sender rotieren, nie "aehnliche" suchen */
+    if (this.cur && this.cur.live) {
+      var m = this.queue.length;
+      var k = this.shuffle ? Math.floor(Math.random() * m) : ((this.idx + d) % m + m) % m;
+      this.idx = k; this.play(this.queue[k]);
+      return;
+    }
+
+    var n = this.shuffle ? Math.floor(Math.random() * this.queue.length) : this.idx + d;
     if (n < 0) n = this.queue.length - 1;
-    if (n >= this.queue.length) { if (this.repeat !== 1 && !this.shuffle) { au.pause(); return; } n = 0; }
+
+    var amEnde = d > 0 && (n >= this.queue.length || this.queue.length < 2);
+    if (amEnde) {
+      if (this.repeat === 1) { this.idx = 0; this.play(this.queue[0]); return; }
+      toast('Suche ähnliche Titel…');
+      this.extend(function (ok) {
+        if (ok) {
+          self.idx = Math.min(self.idx + 1, self.queue.length - 1);
+          self.play(self.queue[self.idx]);
+        } else {
+          toast('Keine weiteren Titel gefunden');
+        }
+      });
+      return;
+    }
+    if (n >= this.queue.length) n = 0;
     this.idx = n;
     this.play(this.queue[n]);
+  },
+
+  /* Warteschlange verlaengern: erst das Genre des laufenden Titels, sonst der
+     Kuenstler. Schon gehoerte und bereits eingereihte Titel fallen raus. */
+  extend: function (cb) {
+    var t = this.cur, self = this;
+    if (!t || t.live || this._busy) return cb(false);
+    this._busy = true;
+
+    var byGenre = t.source === 'Audius' && t.album;
+    var req = byGenre ? Audius.trending(t.album, 25)
+                      : Audius.search(t.artist && t.artist !== 'Unknown' ? t.artist : (t.album || t.title), 25);
+
+    req.then(function (list) {
+      self._busy = false;
+      var drin = {};
+      self.queue.forEach(function (x) { drin[x.id] = 1; });
+      var neu = (list || []).filter(function (x) { return !drin[x.id]; });
+      if (!neu.length && byGenre) {                 /* Genre leer? dann ueber den Kuenstler */
+        Audius.search(t.artist, 25).then(function (l2) {
+          var n2 = (l2 || []).filter(function (x) { return !drin[x.id]; });
+          if (!n2.length) return cb(false);
+          self.queue = self.queue.concat(n2);
+          cb(true);
+        }).catch(function () { cb(false); });
+        return;
+      }
+      if (!neu.length) return cb(false);
+      self.queue = self.queue.concat(neu);
+      cb(true);
+    }).catch(function () { self._busy = false; cb(false); });
   },
 
   history: function (t) {
@@ -1940,7 +1996,7 @@ var Sugg = {
     if (!this.pool.length) return;
     var i = Math.floor(Math.random() * this.pool.length);
     this.cur = this.pool[i];
-    $('#sugWhy').textContent = this.why || 'Vorschlag';
+    var w = $('#sugg'); if (w) w.title = this.why || 'Vorschlag';
     $('#sugT').textContent = this.cur.title;
     $('#sugA').textContent = this.cur.artist + ' · ' + mmss(this.cur.dur);
     this.show();
