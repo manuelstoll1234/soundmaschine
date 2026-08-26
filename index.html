@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOUNDMASCHINE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* ---- palette: warm neutrals biased toward the accent, VU-meter amber for
+   Manuel (valve glow / hi-fi meter), neon magenta for Maya (80s). ---- */
+:root{
+  --bg:#fbfaf8; --bg2:#f2f0ec; --bg3:#e8e5df; --bg4:#dad6ce;
+  --fg:#17150f; --fg2:#57534a; --fg3:#8b8578;
+  --line:#dfdbd3;
+  --accent:#c25a00; --accent2:#9c4400; --accent-fg:#fff8f0;
+  --radius:10px;
+  --bar-h:96px; --side-w:248px;
+  --f-disp:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+:root body.u-maya{ --accent:#b8006b; --accent2:#8f0053; --accent-fg:#fff5fa; }
+
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d0c0a; --bg2:#161410; --bg3:#201d18; --bg4:#2e2a23;
+    --fg:#f6f3ed; --fg2:#a49d90; --fg3:#6e685c;
+    --line:#2b2721;
+    --accent:#ff9426; --accent2:#e0740c; --accent-fg:#1a0f02;
+  }
+  :root:not([data-theme="light"]) body.u-maya{ --accent:#ff4f9a; --accent2:#d92d78; --accent-fg:#22040f; }
+}
+:root[data-theme="dark"]{
+  --bg:#0d0c0a; --bg2:#161410; --bg3:#201d18; --bg4:#2e2a23;
+  --fg:#f6f3ed; --fg2:#a49d90; --fg3:#6e685c;
+  --line:#2b2721;
+  --accent:#ff9426; --accent2:#e0740c; --accent-fg:#1a0f02;
+}
+:root[data-theme="dark"] body.u-maya{ --accent:#ff4f9a; --accent2:#d92d78; --accent-fg:#22040f; }
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--fg);
+  font:15px/1.5 var(--f-body);
+  overflow:hidden;-webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- shell ---------- */
+#shell{display:grid;grid-template-columns:var(--side-w) 1fr;height:100vh;padding-bottom:var(--bar-h)}
+
+/* ---------- sidebar ---------- */
+#side{background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 14px;font-family:var(--f-disp);font-weight:800;letter-spacing:1.4px;font-size:14.5px}
+.brand .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:14px;flex:none}
+
+.usr{margin:0 12px 14px;position:relative}
+.usr-btn{width:100%;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--radius);background:var(--bg3);border:1px solid var(--line);transition:.15s}
+.usr-btn:hover{background:var(--bg4)}
+.av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-fg);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.usr-meta{text-align:left;min-width:0;flex:1}
+.usr-meta b{display:block;font-size:13.5px}
+.usr-meta span{display:block;font-size:11px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg3);border:1px solid var(--line);border-radius:var(--radius);padding:5px;z-index:60;box-shadow:0 12px 34px rgba(0,0,0,.5)}
+.usr-menu[hidden]{display:none}
+.usr-menu button{width:100%;display:flex;gap:9px;align-items:center;padding:8px;border-radius:7px;text-align:left}
+.usr-menu button:hover{background:var(--bg4)}
+
+nav{padding:0 8px;display:flex;flex-direction:column;gap:2px}
+.nav{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;color:var(--fg2);font-weight:600;font-size:14px;width:100%;text-align:left;transition:.12s}
+.nav:hover{color:var(--fg);background:var(--bg3)}
+.nav.on{color:var(--fg);background:var(--bg3)}
+.nav.on::before{content:"";position:absolute;margin-left:-12px;width:3px;height:17px;background:var(--accent);border-radius:3px}
+.nav i{font-style:normal;width:18px;text-align:center;font-size:15px}
+
+.side-sec{margin-top:16px;padding:0 18px;flex:1;overflow-y:auto;min-height:0}
+.side-sec h4{font-family:var(--f-mono);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--fg3);margin-bottom:9px;font-weight:600}
+.pl-link{display:flex;align-items:center;gap:8px;width:100%;padding:6px 0;color:var(--fg2);font-size:13px;text-align:left;transition:.12s}
+.pl-link:hover{color:var(--fg)}
+.pl-link b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-link em{font-style:normal;color:var(--fg3);font-size:11px;flex:none}
+.side-foot{padding:12px 18px;border-top:1px solid var(--line);font-size:10.5px;color:var(--fg3);line-height:1.6}
+
+/* ---------- main ---------- */
+#main{overflow-y:auto;position:relative}
+header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:14px 26px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+h1#ttl{font-family:var(--f-disp);font-size:19px;font-weight:700;letter-spacing:-.2px;flex:none}
+.search-wrap{flex:1;max-width:460px;position:relative}
+#q{width:100%;padding:9px 14px 9px 36px;border-radius:999px;background:var(--bg3);border:1px solid var(--line);outline:none;font-size:14px}
+#q:focus{border-color:var(--accent)}
+.search-wrap::before{content:"⌕";position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--fg3);font-size:17px}
+.hdr-btn{width:34px;height:34px;border-radius:50%;background:var(--bg3);border:1px solid var(--line);display:grid;place-items:center;font-size:14px;transition:.15s;flex:none}
+.hdr-btn:hover{background:var(--bg4)}
+#page{padding:22px 26px 40px}
+
+/* ---------- cards ---------- */
+.sec{margin-bottom:34px}
+.sec-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;gap:12px}
+.sec-hd h2{font-family:var(--f-disp);font-size:17px;font-weight:700;letter-spacing:-.2px;text-wrap:balance}
+.sec-hd p{font-size:12.5px;color:var(--fg2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:16px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:11px;cursor:pointer;transition:.16s;position:relative;overflow:hidden}
+.card:hover{background:var(--bg3);transform:translateY(-2px)}
+.art{width:100%;aspect-ratio:1;border-radius:7px;object-fit:cover;background:var(--bg4);display:block;margin-bottom:9px}
+.art-ph{width:100%;aspect-ratio:1;border-radius:7px;background:linear-gradient(135deg,var(--bg4),var(--bg3));display:grid;place-items:center;font-size:30px;margin-bottom:9px}
+.card b{display:block;font-size:13.5px;font-weight:650;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card span{display:block;font-size:12px;color:var(--fg2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.tag{position:absolute;top:16px;right:16px;background:rgba(0,0,0,.72);color:#fff;font-family:var(--f-mono);font-size:9px;font-weight:600;letter-spacing:.4px;padding:3px 6px;border-radius:5px;backdrop-filter:blur(4px)}
+.tag.loss{background:var(--accent);color:var(--accent-fg)}
+
+/* rows */
+.rows{display:flex;flex-direction:column;gap:1px}
+.row{display:grid;grid-template-columns:30px 42px 1fr auto auto;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:.12s}
+.row:hover{background:var(--bg3)}
+.row.playing{background:var(--bg3)}
+.row.playing .r-t{color:var(--accent)}
+.r-n{color:var(--fg3);font-family:var(--f-mono);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.row:hover .r-n{color:var(--fg)}
+.r-a{width:42px;height:42px;border-radius:5px;object-fit:cover;background:var(--bg4)}
+.r-m{min-width:0}
+.r-t{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-s{font-size:12px;color:var(--fg2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-q{font-family:var(--f-mono);font-size:9.5px;font-weight:600;letter-spacing:.3px;color:var(--fg3);border:1px solid var(--line);padding:2px 5px;border-radius:4px;white-space:nowrap}
+.r-q.loss{color:var(--accent);border-color:var(--accent)}
+.r-add{width:28px;height:28px;border-radius:50%;color:var(--fg3);font-size:17px;display:grid;place-items:center;opacity:0}
+.row:hover .r-add{opacity:1}
+.r-add:hover{color:var(--accent);background:var(--bg4)}
+
+/* ---------- player bar ---------- */
+#bar{position:fixed;bottom:0;left:0;right:0;height:var(--bar-h);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr minmax(300px,42%) 1fr;align-items:center;gap:16px;padding:0 18px;z-index:70}
+.np{display:flex;align-items:center;gap:12px;min-width:0}
+.np img,.np .ph{width:56px;height:56px;border-radius:7px;object-fit:cover;background:var(--bg4);flex:none;display:grid;place-items:center;font-size:22px}
+.np-m{min-width:0}
+.np-m b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-m span{display:block;font-size:11.5px;color:var(--fg2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc{display:flex;flex-direction:column;align-items:center;gap:7px}
+.pc-btns{display:flex;align-items:center;gap:14px}
+.pb{color:var(--fg2);font-size:15px;transition:.14s;width:28px;height:28px;display:grid;place-items:center;border-radius:50%}
+.pb:hover{color:var(--fg)}
+.pb.on{color:var(--accent)}
+.pb-play{width:38px;height:38px;border-radius:50%;background:var(--fg);color:var(--bg);font-size:14px;display:grid;place-items:center;transition:.14s}
+.pb-play:hover{transform:scale(1.07)}
+.seek{display:flex;align-items:center;gap:9px;width:100%}
+.seek span{font-family:var(--f-mono);font-size:10.5px;color:var(--fg3);font-variant-numeric:tabular-nums;width:38px;flex:none}
+.seek span:last-child{text-align:right}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;background:var(--bg4);outline:none;cursor:pointer;flex:1}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--accent)}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
+.pr{display:flex;align-items:center;justify-content:flex-end;gap:11px}
+.qb{font-family:var(--f-mono);font-size:9.5px;font-weight:600;letter-spacing:.4px;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--fg2);white-space:nowrap}
+.qb.loss{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+#vol{width:82px;flex:none}
+#viz{width:88px;height:34px;border-radius:6px;background:var(--bg3);cursor:pointer;flex:none}
+
+/* ---------- misc ---------- */
+.empty{text-align:center;padding:56px 20px;color:var(--fg2)}
+.empty .ic{font-size:42px;margin-bottom:12px;opacity:.5}
+.empty b{display:block;font-family:var(--f-disp);font-size:16px;font-weight:700;color:var(--fg);margin-bottom:6px}
+.empty p{font-size:13px;max-width:400px;margin:0 auto;line-height:1.65}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--bg4);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{padding:6px 13px;border-radius:999px;background:var(--bg3);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--fg2);transition:.14s;font-family:var(--f-body)}
+.chip:hover{color:var(--fg);border-color:var(--fg3)}
+.chip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn{padding:8px 16px;border-radius:999px;background:var(--accent);color:var(--accent-fg);font-weight:700;font-size:13px;transition:.14s}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:var(--bg3);color:var(--fg);border:1px solid var(--line)}
+#toast{position:fixed;bottom:calc(var(--bar-h) + 16px);left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg4);border:1px solid var(--line);padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:200;opacity:0;pointer-events:none;transition:.22s;box-shadow:0 8px 28px rgba(0,0,0,.4)}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.set{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;max-width:660px}
+.set h3{font-family:var(--f-disp);font-size:14px;font-weight:700;margin-bottom:5px}
+.set p{font-size:12.5px;color:var(--fg2);line-height:1.6;margin-bottom:11px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-top:1px solid var(--line)}
+.set-row b{font-size:13px;font-weight:600}
+.set-row small{display:block;color:var(--fg2);font-size:11.5px;margin-top:1px}
+select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid var(--line);outline:none;font-size:13px}
+.hero{display:flex;align-items:flex-end;gap:20px;padding:20px;border-radius:14px;margin-bottom:26px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 26%,var(--bg2)),var(--bg2))}
+.hero-art{width:112px;height:112px;border-radius:10px;background:var(--bg4);display:grid;place-items:center;font-size:44px;flex:none;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.hero small{font-family:var(--f-mono);font-size:10px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--fg2)}
+.hero h2{font-family:var(--f-disp);font-size:30px;font-weight:800;letter-spacing:-.8px;line-height:1.1;margin:5px 0 7px;text-wrap:balance}
+.hero p{font-size:13px;color:var(--fg2)}
+
+@media(max-width:900px){
+  :root{--side-w:0px;--bar-h:132px}
+  #shell{grid-template-columns:1fr}
+  #side{position:fixed;inset:0 auto 0 0;width:250px;z-index:120;transform:translateX(-100%);transition:.24s}
+  #side.open{transform:none}
+  #scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:110}
+  #scrim[hidden]{display:none}
+  #bar{grid-template-columns:1fr;grid-auto-rows:auto;gap:8px;padding:10px 14px;align-content:center}
+  .pr{justify-content:center}
+  #viz{display:none}
+  header{padding:12px 16px;gap:10px}
+  h1#ttl{display:none}
+  #page{padding:16px 16px 30px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
+  .row{grid-template-columns:36px 1fr auto}
+  .r-n,.r-q{display:none}
+  .hero{flex-direction:column;align-items:flex-start}
+  .hero h2{font-size:22px}
+}
+@media(min-width:901px){#menuBtn,#scrim{display:none}}
+</style>
+</head>
+<body class="u-manuel">
+
+<div id="shell">
+  <aside id="side">
+    <div class="brand"><span class="dot">◈</span><span>SOUNDMASCHINE</span></div>
+
+    <div class="usr">
+      <button class="usr-btn" id="usrBtn">
+        <span class="av" id="usrAv">M</span>
+        <span class="usr-meta"><b id="usrName">Manuel</b><span id="usrGen">Alternative · HardCore</span></span>
+        <span style="color:var(--fg3);font-size:10px">▾</span>
+      </button>
+      <div class="usr-menu" id="usrMenu" hidden></div>
+    </div>
+
+    <nav id="nav"></nav>
+
+    <div class="side-sec">
+      <h4>Your Playlists</h4>
+      <div id="plList"></div>
+    </div>
+    <div class="side-foot">No account · No subscription<br>Everything stays in this browser</div>
+  </aside>
+
+  <main id="main">
+    <header>
+      <button class="hdr-btn" id="menuBtn">☰</button>
+      <h1 id="ttl">Home</h1>
+      <div class="search-wrap"><input id="q" placeholder="Search songs, artists, albums…" autocomplete="off"></div>
+      <button class="hdr-btn" id="themeBtn" title="Toggle theme">◐</button>
+    </header>
+    <div id="page"></div>
+  </main>
+</div>
+<div id="scrim" hidden></div>
+
+<div id="bar">
+  <div class="np">
+    <div class="ph" id="npArt">♪</div>
+    <div class="np-m"><b id="npT">Nothing playing</b><span id="npS">Pick something to start</span></div>
+  </div>
+  <div class="pc">
+    <div class="pc-btns">
+      <button class="pb" id="bShuf" title="Shuffle">⤨</button>
+      <button class="pb" id="bPrev" title="Previous">⏮</button>
+      <button class="pb-play" id="bPlay" title="Play">▶</button>
+      <button class="pb" id="bNext" title="Next">⏭</button>
+      <button class="pb" id="bRep" title="Repeat">⟳</button>
+    </div>
+    <div class="seek">
+      <span id="tCur">0:00</span>
+      <input type="range" id="seek" min="0" max="1000" value="0">
+      <span id="tDur">0:00</span>
+    </div>
+  </div>
+  <div class="pr">
+    <canvas id="viz" title="Click to change visualizer mode"></canvas>
+    <span class="qb" id="qBadge">—</span>
+    <span style="color:var(--fg2);font-size:13px">🔊</span>
+    <input type="range" id="vol" min="0" max="100" value="80">
+  </div>
+</div>
+
+<!-- Two elements on purpose. Routing an element through Web Audio makes it output
+     SILENCE when the stream sends no CORS headers, and most radio streams don't.
+     So: #au plays everything untouched; #auX is reserved for archive.org, which
+     does send CORS, and is the only one wired to the analyser. -->
+<audio id="au" preload="none"></audio>
+<audio id="auX" crossorigin="anonymous" preload="none"></audio>
+<div id="toast"></div>
+<script>
+/* ============================================================
+   SOUNDMASCHINE — single-file music app
+   Sources (all keyless + CORS-safe from a browser):
+     iTunes Search  : metadata, album art, 30s AAC previews
+     Radio Browser  : full-length live streams (incl. high-bitrate)
+     Internet Archive: full-length tracks, incl. FLAC / lossless
+   ============================================================ */
+(function () {
+'use strict';
+
+/* ---------- tiny helpers ---------- */
+var $ = function (s) { return document.querySelector(s); };
+var el = function (t, c, h) { var e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
+var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]; }); };
+var mmss = function (s) { s = Math.max(0, Math.floor(s || 0)); var m = Math.floor(s / 60); return m + ':' + String(s % 60).padStart(2, '0'); };
+
+/* Archive reports length as either "412.5" or "6:52" — parseFloat("6:52") gives 6, so split first */
+function parseLen(v) {
+  var s = String(v == null ? '' : v);
+  if (s.indexOf(':') >= 0) {
+    var p = s.split(':').map(parseFloat);
+    if (p.length === 2) return (p[0] || 0) * 60 + (p[1] || 0);
+    if (p.length === 3) return (p[0] || 0) * 3600 + (p[1] || 0) * 60 + (p[2] || 0);
+  }
+  return parseFloat(s) || 0;
+}
+
+var toastT;
+function toast(msg) {
+  var t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, 2400);
+}
+
+/* fetch JSON with timeout */
+function getJSON(url, ms) {
+  var ac = new AbortController();
+  var to = setTimeout(function () { ac.abort(); }, ms || 12000);
+  return fetch(url, { signal: ac.signal, headers: { 'Accept': 'application/json' } })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .finally(function () { clearTimeout(to); });
+}
+
+/* JSONP — iTunes supports ?callback=, our bulletproof fallback if CORS ever fails */
+var jsonpN = 0;
+function jsonp(url, ms) {
+  return new Promise(function (res, rej) {
+    var cb = '__sm_cb_' + (++jsonpN);
+    var s = document.createElement('script');
+    var to = setTimeout(function () { cleanup(); rej(new Error('jsonp timeout')); }, ms || 12000);
+    function cleanup() { clearTimeout(to); try { delete window[cb]; } catch (e) { window[cb] = void 0; } if (s.parentNode) s.parentNode.removeChild(s); }
+    window[cb] = function (data) { cleanup(); res(data); };
+    s.onerror = function () { cleanup(); rej(new Error('jsonp error')); };
+    s.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 'callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+
+/* ============================================================
+   STORE — per-user localStorage, fails soft in private mode
+   ============================================================ */
+var Store = {
+  mem: {},
+  ok: (function () { try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; } catch (e) { return false; } })(),
+  get: function (k, d) {
+    try {
+      var v = this.ok ? localStorage.getItem('sm_' + k) : this.mem[k];
+      return v == null ? d : JSON.parse(v);
+    } catch (e) { return d; }
+  },
+  set: function (k, v) {
+    try {
+      var s = JSON.stringify(v);
+      if (this.ok) localStorage.setItem('sm_' + k, s); else this.mem[k] = s;
+    } catch (e) { /* quota — ignore */ }
+  }
+};
+
+/* ============================================================
+   USERS
+   ============================================================ */
+var USERS = {
+  manuel: {
+    name: 'Manuel', initial: 'M', cls: 'u-manuel',
+    blurb: 'Alternative · HardCore',
+    quality: 'lossless',
+    seeds: ['Lee Scratch Perry', 'Alternative rock', 'Hardcore punk', 'Drum and bass', 'Dub reggae', 'Ska'],
+    tags: ['reggae', 'dub', 'hardcore', 'drum and bass', 'alternative', 'punk', 'ska', 'dubstep'],
+    archive: ['dub reggae', 'punk live', 'alternative rock live', 'roots reggae']
+  },
+  maya: {
+    name: 'Maya', initial: 'My', cls: 'u-maya',
+    blurb: '80s · Rock · Schlager',
+    quality: 'high',
+    seeds: ['80s hits', 'Rock and roll', 'Schlager', 'Top charts', 'Disco', 'Oldies'],
+    tags: ['80s', 'schlager', 'rock', 'oldies', 'pop', 'charts', 'disco', 'top 40'],
+    archive: ['1980s pop', 'rock and roll 1950s', 'schlager', 'oldies radio']
+  }
+};
+
+var App = {
+  uid: Store.get('user', 'manuel'),
+  page: 'home',
+  q: '',
+  vizMode: Store.get('viz', 0)
+};
+if (!USERS[App.uid]) App.uid = 'manuel';
+function U() { return USERS[App.uid]; }
+function pkey(k) { return App.uid + '_' + k; }
+
+function playlists() {
+  var p = Store.get(pkey('pl'), null);
+  if (!p) { p = [{ id: 'liked', name: 'Liked Songs', tracks: [] }]; Store.set(pkey('pl'), p); }
+  if (!p.some(function (x) { return x.id === 'liked'; })) p.unshift({ id: 'liked', name: 'Liked Songs', tracks: [] });
+  return p;
+}
+function savePl(p) { Store.set(pkey('pl'), p); renderPlSidebar(); }
+
+/* ============================================================
+   SOURCES
+   ============================================================ */
+var art600 = function (u) { return u ? u.replace(/\/\d+x\d+bb?\./, '/600x600bb.') : ''; };
+
+/* --- iTunes: metadata + art + 30s preview --- */
+var iTunes = {
+  cache: {},
+  search: function (term, limit) {
+    var key = 't' + term + (limit || 25);
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    var url = 'https://itunes.apple.com/search?media=music&entity=song&limit=' + (limit || 25) +
+              '&term=' + encodeURIComponent(term);
+    var self = this;
+    return getJSON(url)
+      .catch(function () { return jsonp(url); })          // CORS fallback
+      .then(function (d) {
+        var out = (d && d.results ? d.results : []).filter(function (r) { return r.previewUrl; }).map(function (r) {
+          return {
+            id: 'it' + r.trackId,
+            title: r.trackName,
+            artist: r.artistName,
+            album: r.collectionName || '',
+            art: art600(r.artworkUrl100),
+            url: r.previewUrl,
+            dur: (r.trackTimeMillis || 30000) / 1000,
+            clip: 30,
+            quality: 'PREVIEW',
+            lossless: false,
+            source: 'iTunes'
+          };
+        });
+        self.cache[key] = out;
+        return out;
+      })
+      .catch(function () { return []; });
+  }
+};
+
+/* --- Radio Browser: full-length live streams --- */
+var Radio = {
+  hosts: ['https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info'],
+  hi: 0,
+  cache: {},
+  _try: function (path, n) {
+    var self = this;
+    if (n >= this.hosts.length) return Promise.resolve([]);
+    return getJSON(this.hosts[(this.hi + n) % this.hosts.length] + path, 10000)
+      .catch(function () { return self._try(path, n + 1); });
+  },
+  byTag: function (tag, limit) {
+    var key = 'r' + tag + (limit || 20);
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    /* ask for more than we need — the https filter below discards a lot */
+    var path = '/json/stations/search?hidebroken=true&order=votes&reverse=true&limit=' + ((limit || 20) * 4) +
+               '&tag=' + encodeURIComponent(tag);
+    var self = this;
+    var securePage = location.protocol === 'https:';
+    return this._try(path, 0).then(function (list) {
+      var out = (list || []).filter(function (s) {
+        if (!s.url_resolved) return false;
+        /* an https page cannot play an http stream — the browser blocks it as mixed
+           content and the station would just fail silently. Drop them up front. */
+        if (securePage && s.url_resolved.indexOf('https://') !== 0) return false;
+        return true;
+      }).slice(0, limit || 20).map(function (s) {
+        var br = s.bitrate || 0;
+        var lossless = /flac/i.test(s.codec || '') || br >= 320;
+        return {
+          id: 'rb' + s.stationuuid,
+          title: s.name.trim(),
+          artist: [s.country, (s.tags || '').split(',').slice(0, 2).join(', ')].filter(Boolean).join(' · '),
+          album: 'Live radio',
+          art: s.favicon || '',
+          url: s.url_resolved,
+          dur: 0, live: true,
+          quality: br ? (br + 'k ' + (s.codec || '').toUpperCase()).trim() : 'LIVE',
+          lossless: lossless,
+          source: 'Radio'
+        };
+      });
+      self.cache[key] = out;
+      return out;
+    }).catch(function () { return []; });
+  }
+};
+
+/* --- Internet Archive: full-length, often lossless --- */
+var Archive = {
+  cache: {},
+  search: function (term, rows, losslessOnly) {
+    var key = 'a' + term + (rows || 12) + (losslessOnly ? 'L' : '');
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    /* format:(Flac) is what actually guarantees lossless — verified against the
+       Archive index, which returns thousands of FLAC items per genre. */
+    var q = '(' + term + ') AND mediatype:(audio)' + (losslessOnly ? ' AND format:(Flac)' : '');
+    var url = 'https://archive.org/advancedsearch.php?q=' + encodeURIComponent(q) +
+              '&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=creator&fl%5B%5D=year' +
+              '&sort%5B%5D=downloads+desc&rows=' + (rows || 12) + '&page=1&output=json';
+    var self = this;
+    return getJSON(url, 14000).then(function (d) {
+      var docs = (d && d.response && d.response.docs) ? d.response.docs : [];
+      var out = docs.map(function (x) {
+        return {
+          id: 'ia' + x.identifier,
+          identifier: x.identifier,
+          title: x.title || x.identifier,
+          artist: [].concat(x.creator || 'Internet Archive').join(', '),
+          year: x.year || '',
+          art: 'https://archive.org/services/img/' + x.identifier
+        };
+      });
+      self.cache[key] = out;
+      return out;
+    }).catch(function () { return []; });
+  },
+  /* resolve an item into playable tracks, preferring lossless */
+  tracks: function (identifier) {
+    var key = 'm' + identifier;
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    var self = this;
+    return getJSON('https://archive.org/metadata/' + encodeURIComponent(identifier), 14000).then(function (m) {
+      var files = m.files || [];
+      var meta = m.metadata || {};
+      /* Archive ships checksum sidecars whose format still says "Flac"
+         ("Flac FingerPrint" -> .ffp). Those are text files, not audio —
+         rank only things that really carry samples. */
+      var AUDIO_EXT = /\.(flac|wav|aiff?|m4a|mp4|ogg|oga|opus|mp3)$/i;
+      var rank = function (f) {
+        var fmt = (f.format || '').toLowerCase();
+        if (!AUDIO_EXT.test(f.name || '')) return 0;
+        if (fmt.indexOf('fingerprint') >= 0 || fmt.indexOf('checksum') >= 0) return 0;
+        if (fmt.indexOf('24bit flac') >= 0) return 5;
+        if (fmt.indexOf('flac') >= 0) return 4;
+        if (fmt.indexOf('wave') >= 0 || fmt.indexOf('wav') >= 0 || fmt.indexOf('aiff') >= 0) return 3;
+        if (fmt.indexOf('ogg') >= 0 || fmt.indexOf('opus') >= 0) return 2;
+        if (fmt.indexOf('vbr mp3') >= 0) return 1.5;
+        if (fmt.indexOf('mp3') >= 0 || fmt.indexOf('m4a') >= 0 || fmt.indexOf('aac') >= 0) return 1;
+        return 0;
+      };
+      /* group by track title, keep best format per track */
+      var best = {};
+      files.forEach(function (f) {
+        var r = rank(f);
+        if (!r) return;
+        /* group the formats of one recording under a shared base name */
+        var base = (f.name || '').replace(/\.[^.]+$/, '');
+        if (!best[base] || rank(best[base].f) < r) best[base] = { f: f, r: r };
+      });
+      var out = [];
+      Object.keys(best).forEach(function (base) {
+        var entry = best[base];
+        var f = entry.f;
+        /* FLAC decodes natively in Chrome, Firefox, Edge and Safari 11+, so keep it —
+           that is what actually delivers lossless playback rather than downgrading to mp3 */
+        var playable = files.filter(function (g) {
+          return (g.name || '').replace(/\.[^.]+$/, '') === base && /\.(flac|wav|m4a|ogg|mp3)$/i.test(g.name || '');
+        }).sort(function (a, b) { return rank(b) - rank(a); })[0] || f;
+
+        var pr = rank(playable);
+        var isLossless = pr >= 3;
+        out.push({
+          id: 'ia' + identifier + '/' + base,
+          title: (f.title || base).replace(/_/g, ' '),
+          artist: meta.creator ? [].concat(meta.creator).join(', ') : (meta.title || 'Internet Archive'),
+          album: meta.title || identifier,
+          art: 'https://archive.org/services/img/' + identifier,
+          url: 'https://archive.org/download/' + identifier + '/' + encodeURIComponent(playable.name),
+          dur: parseLen(f.length),
+          quality: pr >= 5 ? '24-BIT FLAC' : pr === 4 ? 'FLAC' : pr === 3 ? 'WAV' :
+                   ((playable.format || 'MP3').toUpperCase().indexOf('VBR') >= 0 ? 'VBR MP3' : 'MP3'),
+          lossless: isLossless,
+          source: 'Archive'
+        });
+      });
+      out.sort(function (a, b) { return a.id.localeCompare(b.id, void 0, { numeric: true }); });
+      out = out.slice(0, 60);
+      self.cache[key] = out;
+      return out;
+    }).catch(function () { return []; });
+  }
+};
+
+/* ============================================================
+   PLAYER
+   ============================================================ */
+var auPlain = $('#au'), auCors = $('#auX');
+var ALL = [auPlain, auCors];
+var au = auPlain;               /* the element currently in charge */
+
+/* archive.org serves CORS headers, so its files can go through the analyser.
+   Everything else uses the plain element, where Web Audio would mute them. */
+function pickElement(track) {
+  var want = (track && track.source === 'Archive') ? auCors : auPlain;
+  if (want !== au) {
+    try { au.pause(); } catch (e) {}
+    au.removeAttribute('src');
+    try { au.load(); } catch (e) {}
+    au = want;
+  }
+  return want;
+}
+
+var P = {
+  queue: [], idx: -1, shuffle: false, repeat: 0, /* 0 off 1 all 2 one */
+  cur: null,
+
+  play: function (track, queue, i) {
+    if (queue) { this.queue = queue.slice(); this.idx = (i == null ? 0 : i); }
+    else if (!this.queue.length) { this.queue = [track]; this.idx = 0; }
+    this.cur = track;
+    var a = pickElement(track);
+    a.src = track.url;
+    var p = a.play();
+    if (p && p.catch) p.catch(function (e) {
+      if (e && e.name === 'NotAllowedError') toast('Press play to start audio');
+      else toast('Could not start that one — skipping');
+    });
+    if (a === auCors) Viz.attach(); else Viz.loop();
+    this.paint();
+    this.history(track);
+  },
+
+  toggle: function () {
+    if (!this.cur) { toast('Nothing queued yet'); return; }
+    if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); }
+    else au.pause();
+  },
+
+  step: function (d) {
+    if (!this.queue.length) return;
+    var n;
+    if (this.shuffle) { n = Math.floor(Math.random() * this.queue.length); }
+    else { n = this.idx + d; }
+    if (n < 0) n = this.queue.length - 1;
+    if (n >= this.queue.length) { if (this.repeat !== 1 && !this.shuffle) { au.pause(); return; } n = 0; }
+    this.idx = n;
+    this.play(this.queue[n]);
+  },
+
+  history: function (t) {
+    if (t.live) return;
+    var h = Store.get(pkey('hist'), []);
+    h = h.filter(function (x) { return x.id !== t.id; });
+    h.unshift({ id: t.id, title: t.title, artist: t.artist, art: t.art, url: t.url, quality: t.quality, lossless: t.lossless, source: t.source, dur: t.dur });
+    Store.set(pkey('hist'), h.slice(0, 60));
+  },
+
+  paint: function () {
+    var t = this.cur;
+    var a = $('#npArt');
+    if (t && t.art) {
+      if (a.tagName !== 'IMG') { var img = el('img'); img.id = 'npArt'; a.parentNode.replaceChild(img, a); a = img; }
+      a.src = t.art;
+      a.onerror = function () { var d = el('div', 'ph', '♪'); d.id = 'npArt'; this.parentNode.replaceChild(d, this); };
+    } else if (a.tagName === 'IMG') {
+      /* new track has no artwork — clear the old one instead of leaving it stale */
+      var d = el('div', 'ph', '♪'); d.id = 'npArt'; a.parentNode.replaceChild(d, a);
+    }
+    $('#npT').textContent = t ? t.title : 'Nothing playing';
+    $('#npS').textContent = t ? (t.artist + (t.source ? ' · ' + t.source : '')) : 'Pick something to start';
+    var q = $('#qBadge');
+    q.textContent = t ? t.quality : '—';
+    q.classList.toggle('loss', !!(t && t.lossless));
+    $('#bPlay').textContent = au.paused ? '▶' : '❚❚';
+    $('#bShuf').classList.toggle('on', this.shuffle);
+    $('#bRep').classList.toggle('on', this.repeat > 0);
+    $('#bRep').textContent = this.repeat === 2 ? '⟳¹' : '⟳';
+    document.querySelectorAll('.row').forEach(function (r) {
+      r.classList.toggle('playing', !!(t && r.dataset.tid === t.id));
+    });
+  }
+};
+
+/* both elements get the same wiring; handlers ignore whichever one is idle */
+ALL.forEach(function (a) {
+  a.addEventListener('play', function () { if (a === au) P.paint(); });
+  a.addEventListener('pause', function () { if (a === au) P.paint(); });
+  a.addEventListener('ended', function () {
+    if (a !== au) return;
+    if (P.repeat === 2) { a.currentTime = 0; a.play(); return; }
+    P.step(1);
+  });
+  a.addEventListener('error', function () {
+    if (a !== au || !P.cur || !a.getAttribute('src')) return;
+    toast('That stream would not load — skipping');
+    setTimeout(function () { P.step(1); }, 700);
+  });
+  a.addEventListener('timeupdate', function () {
+    if (a !== au) return;
+    if (!a.duration || !isFinite(a.duration)) {
+      $('#tCur').textContent = mmss(a.currentTime);
+      $('#tDur').textContent = (P.cur && P.cur.live) ? 'LIVE' : '--:--';
+      $('#seek').value = '0';
+      return;
+    }
+    $('#seek').value = String((a.currentTime / a.duration) * 1000);
+    $('#tCur').textContent = mmss(a.currentTime);
+    $('#tDur').textContent = mmss(a.duration);
+  });
+});
+
+$('#seek').addEventListener('input', function () {
+  if (au.duration && isFinite(au.duration)) au.currentTime = (this.value / 1000) * au.duration;
+});
+$('#vol').addEventListener('input', function () {
+  var v = this.value / 100;
+  ALL.forEach(function (a) { a.volume = v; });
+  Store.set('vol', this.value);
+});
+(function () {
+  var v = Store.get('vol', 80);
+  ALL.forEach(function (a) { a.volume = v / 100; });
+  $('#vol').value = v;
+})();
+
+$('#bPlay').onclick = function () { P.toggle(); };
+$('#bNext').onclick = function () { P.step(1); };
+$('#bPrev').onclick = function () { if (au.currentTime > 3) { au.currentTime = 0; } else P.step(-1); };
+$('#bShuf').onclick = function () { P.shuffle = !P.shuffle; P.paint(); toast('Shuffle ' + (P.shuffle ? 'on' : 'off')); };
+$('#bRep').onclick = function () { P.repeat = (P.repeat + 1) % 3; P.paint(); toast(['Repeat off', 'Repeat all', 'Repeat one'][P.repeat]); };
+
+/* ============================================================
+   VISUALIZER — handles the cross-origin taint problem
+   ============================================================ */
+var Viz = {
+  cv: $('#viz'), ctx: null, ac: null, an: null, src: null, data: null,
+  raf: 0, dead: false, zeros: 0, mode: App.vizMode || 0,
+  modes: ['bars', 'wave', 'pulse'],
+
+  size: function () {
+    var r = this.cv.getBoundingClientRect();
+    var d = window.devicePixelRatio || 1;
+    if (!r.width) return;
+    this.cv.width = r.width * d; this.cv.height = r.height * d;
+    this.ctx = this.cv.getContext('2d');
+    this.ctx.setTransform(d, 0, 0, d, 0, 0);
+    this.w = r.width; this.h = r.height;
+  },
+
+  /* Only ever wires #auX (archive.org, CORS-clean). createMediaElementSource can be
+     called once per element and permanently routes it, so this must never touch the
+     plain element — doing so would mute every non-CORS stream. */
+  attach: function () {
+    if (this.dead) { this.loop(); return; }
+    if (this.src) {
+      if (this.ac && this.ac.state === 'suspended') this.ac.resume().catch(function () {});
+      this.loop(); return;
+    }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { this.dead = true; this.loop(); return; }
+      this.ac = new AC();
+      this.an = this.ac.createAnalyser();
+      this.an.fftSize = 128;
+      this.an.smoothingTimeConstant = 0.8;
+      this.src = this.ac.createMediaElementSource(auCors);
+      this.src.connect(this.an);
+      this.an.connect(this.ac.destination);   /* MUST reconnect or audio goes silent */
+      this.data = new Uint8Array(this.an.frequencyBinCount);
+    } catch (e) {
+      /* blocked context or double-connect — never let this kill playback */
+      this.dead = true;
+    }
+    if (this.ac && this.ac.state === 'suspended') this.ac.resume().catch(function () {});
+    this.loop();
+  },
+
+  loop: function () {
+    cancelAnimationFrame(this.raf);
+    var self = this;
+    (function frame() {
+      self.raf = requestAnimationFrame(frame);
+      self.draw();
+    })();
+  },
+
+  read: function () {
+    /* real spectrum only while the analyser-wired element is the one playing */
+    if (this.dead || !this.an || au !== auCors) return null;
+    this.an.getByteFrequencyData(this.data);
+    /* cross-origin streams silently produce all-zero data — detect and simulate */
+    var sum = 0;
+    for (var i = 0; i < this.data.length; i++) sum += this.data[i];
+    if (sum === 0) { if (++this.zeros > 90) this.dead = true; return null; }
+    this.zeros = 0;
+    return this.data;
+  },
+
+  sim: function () {
+    /* believable fallback so the panel never looks broken */
+    var n = 32, out = new Uint8Array(n), t = Date.now() / 220;
+    var live = !au.paused;
+    for (var i = 0; i < n; i++) {
+      var f = 1 - i / n;
+      out[i] = live ? Math.max(0, (Math.sin(t + i * 0.55) * 0.5 + 0.5) * 190 * (0.35 + f * 0.8)) : 0;
+    }
+    return out;
+  },
+
+  draw: function () {
+    if (!this.ctx) { this.size(); if (!this.ctx) return; }
+    var d = this.read() || this.sim();
+    var c = this.ctx, w = this.w, h = this.h;
+    var cs = getComputedStyle(document.body);
+    var acc = cs.getPropertyValue('--accent').trim() || '#00e06a';
+    c.clearRect(0, 0, w, h);
+
+    var m = this.modes[this.mode];
+    if (m === 'bars') {
+      var n = Math.min(26, d.length), bw = w / n;
+      for (var i = 0; i < n; i++) {
+        var v = d[Math.floor(i * d.length / n)] / 255;
+        var bh = Math.max(1.5, v * h * 0.92);
+        c.fillStyle = acc;
+        c.globalAlpha = 0.35 + v * 0.65;
+        c.fillRect(i * bw + 0.6, h - bh, bw - 1.4, bh);
+      }
+      c.globalAlpha = 1;
+    } else if (m === 'wave') {
+      c.strokeStyle = acc; c.lineWidth = 1.6; c.beginPath();
+      for (var j = 0; j < d.length; j++) {
+        var x = (j / (d.length - 1)) * w;
+        var y = h / 2 - ((d[j] / 255) - 0.34) * h * 0.85;
+        j ? c.lineTo(x, y) : c.moveTo(x, y);
+      }
+      c.stroke();
+    } else {
+      var avg = 0; for (var k = 0; k < d.length; k++) avg += d[k];
+      avg = avg / d.length / 255;
+      var r = Math.min(w, h) * (0.16 + avg * 0.34);
+      c.beginPath(); c.arc(w / 2, h / 2, r, 0, Math.PI * 2);
+      c.fillStyle = acc; c.globalAlpha = 0.22 + avg * 0.6; c.fill();
+      c.globalAlpha = 1; c.strokeStyle = acc; c.lineWidth = 1.4; c.stroke();
+    }
+  }
+};
+Viz.size();
+window.addEventListener('resize', function () { Viz.size(); });
+Viz.cv.onclick = function () {
+  Viz.mode = (Viz.mode + 1) % Viz.modes.length;
+  Store.set('viz', Viz.mode);
+  toast('Visualizer: ' + Viz.modes[Viz.mode]);
+};
+Viz.loop();
+
+/* ============================================================
+   RENDER HELPERS
+   ============================================================ */
+function trackRow(t, i, list) {
+  var r = el('div', 'row');
+  r.dataset.tid = t.id;
+  r.innerHTML =
+    '<div class="r-n">' + (i + 1) + '</div>' +
+    (t.art ? '<img class="r-a" loading="lazy" src="' + esc(t.art) + '" onerror="this.style.visibility=\'hidden\'">' : '<div class="r-a"></div>') +
+    '<div class="r-m"><div class="r-t">' + esc(t.title) + '</div><div class="r-s">' + esc(t.artist) + '</div></div>' +
+    '<div class="r-q' + (t.lossless ? ' loss' : '') + '">' + esc(t.quality) + '</div>' +
+    '<button class="r-add" title="Add to playlist">＋</button>';
+  r.onclick = function (e) {
+    if (e.target.classList.contains('r-add')) { e.stopPropagation(); addTo(t); return; }
+    P.play(t, list, i);
+  };
+  return r;
+}
+
+function rowsBlock(list) {
+  var wrap = el('div', 'rows');
+  list.forEach(function (t, i) { wrap.appendChild(trackRow(t, i, list)); });
+  return wrap;
+}
+
+function card(o, onClick) {
+  var c = el('div', 'card');
+  c.innerHTML =
+    (o.art ? '<img class="art" loading="lazy" src="' + esc(o.art) + '" onerror="this.outerHTML=\'<div class=&quot;art-ph&quot;>♪</div>\'">'
+           : '<div class="art-ph">' + (o.icon || '♪') + '</div>') +
+    '<b>' + esc(o.title) + '</b><span>' + esc(o.sub || '') + '</span>' +
+    (o.tag ? '<div class="tag' + (o.lossless ? ' loss' : '') + '">' + esc(o.tag) + '</div>' : '');
+  c.onclick = onClick;
+  return c;
+}
+
+function section(title, sub) {
+  var s = el('div', 'sec');
+  s.appendChild(el('div', 'sec-hd', '<h2>' + esc(title) + '</h2>' + (sub ? '<p>' + esc(sub) + '</p>' : '')));
+  return s;
+}
+
+function loading(msg) { return el('div', 'empty', '<div class="ic"><span class="spin"></span></div><b>' + esc(msg || 'Loading…') + '</b>'); }
+function emptyBox(icon, title, body) { return el('div', 'empty', '<div class="ic">' + icon + '</div><b>' + esc(title) + '</b><p>' + body + '</p>'); }
+
+/* add-to-playlist */
+function addTo(t) {
+  var pls = playlists();
+  var names = pls.map(function (p, i) { return (i + 1) + '. ' + p.name; }).join('\n');
+  var pick = prompt('Add "' + t.title + '" to:\n' + names + '\n\nType a number, or a new playlist name:', '1');
+  if (!pick) return;
+  var n = parseInt(pick, 10);
+  var target;
+  if (!isNaN(n) && pls[n - 1]) target = pls[n - 1];
+  else { target = { id: 'p' + Date.now(), name: pick.trim(), tracks: [] }; pls.push(target); }
+  if (target.tracks.some(function (x) { return x.id === t.id; })) { toast('Already in ' + target.name); return; }
+  target.tracks.push(t);
+  savePl(pls);
+  toast('Added to ' + target.name);
+}
+
+/* ============================================================
+   PAGES
+   ============================================================ */
+var PAGES = {};
+
+PAGES.home = function (page) {
+  var u = U();
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art">' + (App.uid === 'maya' ? '✨' : '◈') + '</div>' +
+    '<div><small>Your mix</small><h2>Good ' + dayPart() + ', ' + esc(u.name) + '</h2>' +
+    '<p>' + esc(u.seeds.slice(0, 3).join(' · ')) + ' — tuned to what you listen to.</p></div>'));
+
+  /* recently played */
+  var hist = Store.get(pkey('hist'), []);
+  if (hist.length) {
+    var s0 = section('Jump back in');
+    s0.appendChild(rowsBlock(hist.slice(0, 6)));
+    page.appendChild(s0);
+  }
+
+  /* recommendations per seed genre */
+  u.seeds.slice(0, 4).forEach(function (seed) {
+    var s = section(seed, 'Recommended for you');
+    var g = el('div', 'grid'); s.appendChild(g);
+    var ld = loading(); s.appendChild(ld);
+    page.appendChild(s);
+    iTunes.search(seed, 10).then(function (list) {
+      ld.remove();
+      if (!list.length) { g.remove(); s.appendChild(emptyBox('◌', 'Nothing came back', 'The search service did not respond for “' + esc(seed) + '”.')); return; }
+      list.forEach(function (t, i) {
+        g.appendChild(card({ title: t.title, sub: t.artist, art: t.art, tag: '30s' }, function () { P.play(t, list, i); }));
+      });
+    });
+  });
+};
+
+PAGES.search = function (page) {
+  if (!App.q) {
+    page.appendChild(emptyBox('⌕', 'Search everything',
+      'Type an artist, song or album above. Results come from <b>iTunes</b> (art + 30&nbsp;second previews), ' +
+      '<b>Internet Archive</b> (full-length, often lossless) and <b>Radio Browser</b> (live stations).'));
+    /* quick genre chips */
+    var chips = el('div', 'chips');
+    U().seeds.concat(U().tags.slice(0, 4)).forEach(function (g) {
+      var b = el('button', 'chip', esc(g));
+      b.onclick = function () { $('#q').value = g; doSearch(g); };
+      chips.appendChild(b);
+    });
+    page.appendChild(chips);
+    return;
+  }
+
+  var q = App.q;
+
+  var s1 = section('Songs', 'iTunes · 30 second previews, full album art');
+  var b1 = el('div'); s1.appendChild(b1); b1.appendChild(loading());
+  page.appendChild(s1);
+  iTunes.search(q, 24).then(function (list) {
+    b1.innerHTML = '';
+    if (!list.length) { b1.appendChild(emptyBox('◌', 'No songs found', 'Try a different spelling, or just the artist name.')); return; }
+    b1.appendChild(rowsBlock(list));
+  });
+
+  var s2 = section('Full length & lossless', 'Internet Archive — complete tracks, no clips');
+  var g2 = el('div', 'grid'); s2.appendChild(g2);
+  var l2 = loading(); s2.appendChild(l2);
+  page.appendChild(s2);
+  Archive.search(q, 12).then(function (items) {
+    l2.remove();
+    if (!items.length) { s2.appendChild(emptyBox('◌', 'Nothing in the Archive', 'The Internet Archive had no audio matching “' + esc(q) + '”.')); return; }
+    items.forEach(function (it) {
+      g2.appendChild(card({ title: it.title, sub: it.artist + (it.year ? ' · ' + it.year : ''), art: it.art, icon: '⌗', tag: 'FULL' },
+        function () { openArchive(it); }));
+    });
+  });
+
+  var s3 = section('Live stations', 'Radio Browser — plays continuously, never a clip');
+  var b3 = el('div'); s3.appendChild(b3); b3.appendChild(loading());
+  page.appendChild(s3);
+  Radio.byTag(q, 12).then(function (list) {
+    b3.innerHTML = '';
+    if (!list.length) { b3.appendChild(emptyBox('◌', 'No stations tagged “' + esc(q) + '”', 'Try a genre word like reggae, schlager, hardcore or 80s.')); return; }
+    b3.appendChild(rowsBlock(list));
+  });
+};
+
+PAGES.radio = function (page) {
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art">📻</div><div><small>Full length, always</small>' +
+    '<h2>Radio</h2><p>Live stations tagged for your taste. These stream complete — no 30 second limit.</p></div>'));
+
+  var u = U();
+  var chips = el('div', 'chips');
+  page.appendChild(chips);
+  var host = el('div');
+  page.appendChild(host);
+
+  function load(tag) {
+    Array.prototype.forEach.call(chips.children, function (c) { c.classList.toggle('on', c.textContent === tag); });
+    host.innerHTML = ''; host.appendChild(loading('Finding ' + tag + ' stations…'));
+    Radio.byTag(tag, 24).then(function (list) {
+      host.innerHTML = '';
+      if (!list.length) { host.appendChild(emptyBox('◌', 'No stations right now', 'Radio Browser returned nothing for “' + esc(tag) + '”. Try another tag.')); return; }
+      /* audiophile first */
+      list.sort(function (a, b) { return (b.lossless ? 1 : 0) - (a.lossless ? 1 : 0); });
+      host.appendChild(rowsBlock(list));
+    });
+  }
+  u.tags.forEach(function (t, i) {
+    var b = el('button', 'chip', esc(t));
+    b.onclick = function () { load(t); };
+    chips.appendChild(b);
+    if (i === 0) setTimeout(function () { load(t); }, 0);
+  });
+};
+
+PAGES.lossless = function (page) {
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art">◈</div><div><small>Audiophile</small><h2>Lossless &amp; full length</h2>' +
+    '<p>Internet Archive collections — live recordings and open music, frequently in FLAC or 24-bit.</p></div>'));
+
+  var chips = el('div', 'chips'); page.appendChild(chips);
+  var host = el('div'); page.appendChild(host);
+
+  function load(term) {
+    Array.prototype.forEach.call(chips.children, function (c) { c.classList.toggle('on', c.dataset.t === term); });
+    host.innerHTML = ''; host.appendChild(loading('Searching the Archive for lossless…'));
+    Archive.search(term, 24, true).then(function (items) {
+      host.innerHTML = '';
+      if (!items.length) { host.appendChild(emptyBox('◌', 'Nothing found', 'Try a broader term.')); return; }
+      var g = el('div', 'grid'); host.appendChild(g);
+      items.forEach(function (it) {
+        g.appendChild(card({ title: it.title, sub: it.artist + (it.year ? ' · ' + it.year : ''), art: it.art, icon: '⌗' },
+          function () { openArchive(it); }));
+      });
+    });
+  }
+  U().archive.concat(['live concert flac', 'netlabel']).forEach(function (t, i) {
+    var b = el('button', 'chip', esc(t)); b.dataset.t = t;
+    b.onclick = function () { load(t); };
+    chips.appendChild(b);
+    if (i === 0) setTimeout(function () { load(t); }, 0);
+  });
+};
+
+function openArchive(item) {
+  go('item');
+  var page = $('#page');
+  page.innerHTML = '';
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art" style="background:url(' + esc(item.art) + ') center/cover,var(--bg4)"></div>' +
+    '<div><small>Internet Archive</small><h2>' + esc(item.title) + '</h2><p>' + esc(item.artist) + '</p></div>'));
+  var host = el('div'); host.appendChild(loading('Reading track list…'));
+  page.appendChild(host);
+  Archive.tracks(item.identifier).then(function (tr) {
+    host.innerHTML = '';
+    if (!tr.length) { host.appendChild(emptyBox('◌', 'No playable audio', 'This item has no browser-playable files.')); return; }
+    var lossN = tr.filter(function (t) { return t.lossless; }).length;
+    var hd = el('div', 'sec-hd', '<h2>' + tr.length + ' tracks</h2><p>' + (lossN ? lossN + ' lossless' : 'compressed audio') + '</p>');
+    host.appendChild(hd);
+    var pa = el('button', 'btn', '▶ Play all');
+    pa.style.marginBottom = '14px';
+    pa.onclick = function () { P.play(tr[0], tr, 0); };
+    host.appendChild(pa);
+    host.appendChild(rowsBlock(tr));
+  });
+}
+
+PAGES.library = function (page) {
+  var hist = Store.get(pkey('hist'), []);
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art">📚</div><div><small>' + esc(U().name) + '</small><h2>Your Library</h2>' +
+    '<p>Everything you have played on this device, newest first.</p></div>'));
+  if (!hist.length) {
+    page.appendChild(emptyBox('◌', 'Nothing here yet', 'Play something and it will show up here. Nothing leaves this browser.'));
+    return;
+  }
+  var s = section('Recently played', hist.length + ' tracks');
+  s.appendChild(rowsBlock(hist));
+  page.appendChild(s);
+};
+
+PAGES.playlists = function (page) {
+  var pls = playlists();
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art">▶</div><div><small>' + esc(U().name) + '</small><h2>Playlists</h2>' +
+    '<p>Saved in this browser for this profile. Export them from Settings.</p></div>'));
+  var nb = el('button', 'btn', '＋ New playlist');
+  nb.style.marginBottom = '18px';
+  nb.onclick = function () {
+    var n = prompt('Playlist name:'); if (!n) return;
+    var p = playlists(); p.push({ id: 'p' + Date.now(), name: n.trim(), tracks: [] }); savePl(p); render();
+  };
+  page.appendChild(nb);
+
+  var g = el('div', 'grid');
+  pls.forEach(function (p) {
+    g.appendChild(card({
+      title: p.name, sub: p.tracks.length + ' track' + (p.tracks.length === 1 ? '' : 's'),
+      art: p.tracks[0] && p.tracks[0].art, icon: p.id === 'liked' ? '♥' : '≡'
+    }, function () { openPlaylist(p.id); }));
+  });
+  page.appendChild(g);
+};
+
+function openPlaylist(id) {
+  go('pl');
+  var p = playlists().filter(function (x) { return x.id === id; })[0];
+  var page = $('#page'); page.innerHTML = '';
+  if (!p) { page.appendChild(emptyBox('◌', 'Playlist gone', 'It may have been deleted.')); return; }
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art">' + (p.id === 'liked' ? '♥' : '≡') + '</div>' +
+    '<div><small>Playlist</small><h2>' + esc(p.name) + '</h2><p>' + p.tracks.length + ' tracks</p></div>'));
+
+  var bar = el('div'); bar.style.cssText = 'display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap';
+  if (p.tracks.length) {
+    var pb = el('button', 'btn', '▶ Play');
+    pb.onclick = function () { P.play(p.tracks[0], p.tracks, 0); };
+    bar.appendChild(pb);
+  }
+  if (p.id !== 'liked') {
+    var db = el('button', 'btn ghost', 'Delete playlist');
+    db.onclick = function () {
+      if (!confirm('Delete "' + p.name + '"?')) return;
+      savePl(playlists().filter(function (x) { return x.id !== id; }));
+      go('playlists');
+    };
+    bar.appendChild(db);
+  }
+  page.appendChild(bar);
+
+  if (!p.tracks.length) { page.appendChild(emptyBox('◌', 'Empty playlist', 'Use the ＋ button on any track to add it here.')); return; }
+
+  var wrap = el('div', 'rows');
+  p.tracks.forEach(function (t, i) {
+    var r = trackRow(t, i, p.tracks);
+    var rm = r.querySelector('.r-add');
+    rm.textContent = '−'; rm.title = 'Remove';
+    rm.onclick = function (e) {
+      e.stopPropagation();
+      var all = playlists();
+      var tgt = all.filter(function (x) { return x.id === id; })[0];
+      tgt.tracks = tgt.tracks.filter(function (x) { return x.id !== t.id; });
+      savePl(all); openPlaylist(id); toast('Removed');
+    };
+    wrap.appendChild(r);
+  });
+  page.appendChild(wrap);
+}
+
+PAGES.settings = function (page) {
+  var u = U();
+  page.appendChild(el('div', 'hero',
+    '<div class="hero-art">⚙</div><div><small>' + esc(u.name) + '</small><h2>Settings</h2>' +
+    '<p>Everything is stored in this browser only.</p></div>'));
+
+  /* where the music comes from — honest about limits */
+  var s1 = el('div', 'set');
+  s1.innerHTML =
+    '<h3>Where the music comes from</h3>' +
+    '<p>All three sources are free and need no account or API key.</p>' +
+    '<div class="set-row"><div><b>iTunes Search</b><small>Album art, metadata, 30-second AAC previews</small></div><span class="qb">PREVIEW</span></div>' +
+    '<div class="set-row"><div><b>Internet Archive</b><small>Complete tracks — live sets, netlabels, often FLAC / 24-bit</small></div><span class="qb loss">LOSSLESS</span></div>' +
+    '<div class="set-row"><div><b>Radio Browser</b><small>Live stations, continuous playback, up to 320k and FLAC</small></div><span class="qb">LIVE</span></div>';
+  page.appendChild(s1);
+
+  var s2 = el('div', 'set');
+  s2.innerHTML = '<h3>Playback</h3><p>Preferences for ' + esc(u.name) + '.</p>';
+  var r1 = el('div', 'set-row', '<div><b>Preferred quality</b><small>Used to sort results — lossless first when available</small></div>');
+  var sel = el('select');
+  [['lossless', 'Lossless / highest'], ['high', 'High (320k)'], ['std', 'Standard']].forEach(function (o) {
+    var op = el('option', null, o[1]); op.value = o[0];
+    if (Store.get(pkey('qual'), u.quality) === o[0]) op.selected = true;
+    sel.appendChild(op);
+  });
+  sel.onchange = function () { Store.set(pkey('qual'), this.value); toast('Saved'); };
+  r1.appendChild(sel); s2.appendChild(r1);
+  page.appendChild(s2);
+
+  var s3 = el('div', 'set');
+  s3.innerHTML = '<h3>Your data</h3><p>Nothing is uploaded anywhere. Export gives you a JSON file you can re-import later.</p>';
+  var row = el('div', 'set-row', '<div><b>Playlists &amp; history</b><small>' + playlists().length + ' playlists · ' + Store.get(pkey('hist'), []).length + ' played</small></div>');
+  var box = el('div'); box.style.cssText = 'display:flex;gap:8px';
+  var ex = el('button', 'btn ghost', 'Export');
+  ex.onclick = function () {
+    var name = 'soundmaschine-' + App.uid + '.json';
+    var json = JSON.stringify({ user: App.uid, playlists: playlists(), history: Store.get(pkey('hist'), []) }, null, 2);
+
+    /* Hosted on claude.ai the page cannot start its own download — the viewer
+       has to confirm one. Everywhere else (Netlify, local file) the blob link works. */
+    var host = (window.claude && window.claude.use) ? window.claude.use('downloads') : null;
+    Promise.resolve(host).then(function (dl) {
+      if (!dl) throw new Error('no host');
+      return dl.save({ filename: name, data: json }).then(function () { toast('Exported'); });
+    }).catch(function (err) {
+      if (err && err.code === 'declined') return;
+      if (err && err.code) { toast('Export failed: ' + err.code); return; }
+      var blob = new Blob([json], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = el('a'); a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
+  };
+  var cl = el('button', 'btn ghost', 'Clear history');
+  cl.onclick = function () { if (confirm('Clear listening history for ' + u.name + '?')) { Store.set(pkey('hist'), []); toast('History cleared'); render(); } };
+  box.appendChild(ex); box.appendChild(cl); row.appendChild(box); s3.appendChild(row);
+  page.appendChild(s3);
+};
+
+function dayPart() { var h = new Date().getHours(); return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'; }
+
+/* ============================================================
+   NAV / ROUTER
+   ============================================================ */
+var NAV = [
+  ['home', '⌂', 'Home'],
+  ['search', '⌕', 'Search'],
+  ['radio', '📻', 'Radio'],
+  ['lossless', '◈', 'Lossless'],
+  ['library', '📚', 'Library'],
+  ['playlists', '▶', 'Playlists'],
+  ['settings', '⚙', 'Settings']
+];
+
+function renderNav() {
+  var n = $('#nav'); n.innerHTML = '';
+  NAV.forEach(function (item) {
+    var b = el('button', 'nav' + (App.page === item[0] ? ' on' : ''), '<i>' + item[1] + '</i>' + item[2]);
+    b.onclick = function () { go(item[0]); closeSide(); };
+    n.appendChild(b);
+  });
+}
+
+function renderPlSidebar() {
+  var h = $('#plList'); h.innerHTML = '';
+  playlists().forEach(function (p) {
+    var b = el('button', 'pl-link', '<b>' + esc(p.name) + '</b><em>' + p.tracks.length + '</em>');
+    b.onclick = function () { openPlaylist(p.id); closeSide(); };
+    h.appendChild(b);
+  });
+}
+
+function go(p) {
+  App.page = p;
+  renderNav();
+  var titles = { home: 'Home', search: 'Search', radio: 'Radio', lossless: 'Lossless', library: 'Library', playlists: 'Playlists', settings: 'Settings', item: 'Album', pl: 'Playlist' };
+  $('#ttl').textContent = titles[p] || 'Home';
+  if (PAGES[p]) render();
+  $('#main').scrollTop = 0;
+}
+
+function render() {
+  var page = $('#page');
+  page.innerHTML = '';
+  var fn = PAGES[App.page];
+  if (fn) { try { fn(page); } catch (e) { page.appendChild(emptyBox('!', 'Something broke rendering this page', esc(e.message))); } }
+  P.paint();
+}
+
+/* ---------- search input ---------- */
+var sT;
+function doSearch(v) {
+  App.q = v.trim();
+  App.page = 'search';
+  renderNav();
+  $('#ttl').textContent = 'Search';
+  render();
+}
+$('#q').addEventListener('input', function () {
+  var v = this.value;
+  clearTimeout(sT);
+  sT = setTimeout(function () { doSearch(v); }, 420);
+});
+$('#q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(sT); doSearch(this.value); } });
+
+/* ---------- user switch ---------- */
+function renderUser() {
+  var u = U();
+  document.body.className = u.cls;
+  $('#usrAv').textContent = u.initial;
+  $('#usrName').textContent = u.name;
+  $('#usrGen').textContent = u.blurb;
+
+  var m = $('#usrMenu'); m.innerHTML = '';
+  Object.keys(USERS).forEach(function (k) {
+    var x = USERS[k];
+    var b = el('button', null, '<span class="av" style="width:26px;height:26px;font-size:11px">' + x.initial + '</span>' +
+      '<span style="min-width:0"><b style="display:block;font-size:13px">' + x.name + '</b>' +
+      '<span style="font-size:11px;color:var(--fg2)">' + esc(x.blurb) + '</span></span>');
+    b.onclick = function () {
+      App.uid = k; Store.set('user', k);
+      m.hidden = true;
+      renderUser(); renderPlSidebar(); go('home');
+      toast('Switched to ' + x.name);
+    };
+    m.appendChild(b);
+  });
+}
+$('#usrBtn').onclick = function (e) { e.stopPropagation(); $('#usrMenu').hidden = !$('#usrMenu').hidden; };
+document.addEventListener('click', function () { $('#usrMenu').hidden = true; });
+
+/* ---------- theme ---------- */
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  Store.set('theme', t);
+  $('#themeBtn').textContent = t === 'dark' ? '◐' : '◑';
+}
+/* first run follows any theme the host already stamped, else the OS preference;
+   after that this app's own toggle wins */
+function bootTheme() {
+  var stamped = document.documentElement.getAttribute('data-theme');
+  if (stamped === 'light' || stamped === 'dark') return stamped;
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+}
+setTheme(Store.get('theme', bootTheme()));
+$('#themeBtn').onclick = function () {
+  setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+};
+
+/* ---------- mobile drawer ---------- */
+function closeSide() { $('#side').classList.remove('open'); $('#scrim').hidden = true; }
+$('#menuBtn').onclick = function () { $('#side').classList.add('open'); $('#scrim').hidden = false; };
+$('#scrim').onclick = closeSide;
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown', function (e) {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); P.toggle(); }
+  if (e.key === 'ArrowRight' && e.shiftKey) P.step(1);
+  if (e.key === 'ArrowLeft' && e.shiftKey) P.step(-1);
+  if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
+});
+
+/* ============================================================
+   CONNECTIVITY — some hosts (the claude.ai artifact sandbox, strict
+   corporate proxies) block outbound requests entirely. Say so plainly
+   instead of showing empty shelves everywhere.
+   ============================================================ */
+var Net = {
+  blocked: false,
+  check: function () {
+    var probe = 'https://itunes.apple.com/search?media=music&limit=1&term=music';
+    var self = this;
+    return getJSON(probe, 9000)
+      .catch(function () { return jsonp(probe, 9000); })
+      .then(function () { self.blocked = false; })
+      .catch(function () { self.blocked = true; self.banner(); });
+  },
+  banner: function () {
+    if (document.getElementById('netbanner')) return;
+    var b = el('div', null,
+      '<b>This page cannot reach the music services.</b>' +
+      '<p>SOUNDMASCHINE loads everything live from iTunes, the Internet Archive and Radio Browser. ' +
+      'The preview sandbox on claude.ai blocks outside requests, so nothing can load here. ' +
+      'Open <code>index.html</code> from your own machine, or put it on Netlify, and it works normally.</p>');
+    b.id = 'netbanner';
+    b.style.cssText =
+      'margin:0 0 20px;padding:14px 16px;border-radius:10px;background:var(--bg2);' +
+      'border:1px solid var(--accent);border-left-width:3px;font-size:13px;line-height:1.6';
+    b.querySelector('p').style.cssText = 'margin-top:5px;color:var(--fg2)';
+    b.querySelector('b').style.cssText = 'font-family:var(--f-disp);font-size:14px';
+    var page = $('#page');
+    page.insertBefore(b, page.firstChild);
+  }
+};
+
+/* ---------- boot ---------- */
+renderUser();
+renderPlSidebar();
+go('home');
+Net.check();
+/* keep the notice pinned across page changes once we know we are sandboxed */
+(function () {
+  var origRender = render;
+  render = function () { origRender(); if (Net.blocked) Net.banner(); };
+})();
+window.SM = { App: App, P: P, Store: Store, iTunes: iTunes, Radio: Radio, Archive: Archive, Viz: Viz };
+
+})();
+
+</script>
+</body>
+</html>
