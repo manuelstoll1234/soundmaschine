@@ -247,6 +247,10 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
   .hero h2{font-size:16px;margin:1px 0}
   .hero small{font-size:8.5px}
   .hero p{font-size:11px}
+  .hero-m small{padding-right:50px}
+  .wx{top:8px;right:9px;font-size:10px;gap:4px}
+  .wx .i{font-size:12px}
+  .wx .pl{display:none}
 }
 @media(min-width:901px){#menuBtn,#scrim{display:none}}
 
@@ -507,6 +511,24 @@ header{padding:12px 26px}
 .hero h2{font-size:17px;letter-spacing:-.3px;margin:2px 0 2px}
 .hero p{font-size:11.5px}
 
+/* ---------- Hero als Now-Playing-Panel + diskretes Wetter ---------- */
+.hero{position:relative;overflow:hidden}
+.hero-m{min-width:0;flex:1 1 auto}
+.hero-m small{padding-right:112px}
+.hero-m h2,.hero-m p,.hero-m small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.hero-art img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.hero-art{overflow:hidden}
+.hero.np-mode{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 34%,var(--bg2)),var(--bg2))}
+.hero.np-mode .hero-m small{color:var(--accent)}
+
+/* Wetter: klein, ruhig, oben rechts - stoert die Titelzeile nicht */
+.wx{position:absolute;top:10px;right:12px;display:flex;align-items:center;gap:5px;
+  font-family:var(--f-mono);font-size:11px;font-weight:600;color:var(--fg2);
+  letter-spacing:.3px;opacity:.72;pointer-events:none;line-height:1}
+.wx .i{font-size:13px;line-height:1}
+.wx .pl{font-size:9px;letter-spacing:.8px;text-transform:uppercase;opacity:.75;
+  padding-left:5px;margin-left:1px;border-left:1px solid currentColor}
+
 /* ---------- Seitenleiste: enger, damit Logo + Navigation zusammen passen ---------- */
 #nav{padding:0 10px}
 #nav button{padding:8px 11px;font-size:13px}
@@ -737,6 +759,65 @@ function jsonp(url, ms) {
     document.head.appendChild(s);
   });
 }
+
+/* ---- Weather — Naenikon, Switzerland. Open-Meteo: free, keyless, CORS-enabled ---- */
+var Weather = {
+  LAT: 47.361, LON: 8.719,
+  cache: null, ts: 0, pending: null,
+  wmo: function (c) {
+    if (c === 0) return ['☀', 'Klar'];
+    if (c === 1 || c === 2) return ['🌤', 'Leicht bewölkt'];
+    if (c === 3) return ['☁', 'Bewölkt'];
+    if (c === 45 || c === 48) return ['🌫', 'Nebel'];
+    if (c >= 51 && c <= 57) return ['🌦', 'Niesel'];
+    if (c >= 61 && c <= 67) return ['🌧', 'Regen'];
+    if (c >= 71 && c <= 77) return ['🌨', 'Schnee'];
+    if (c >= 80 && c <= 82) return ['🌦', 'Schauer'];
+    if (c >= 85 && c <= 86) return ['🌨', 'Schneeschauer'];
+    if (c >= 95) return ['⛈', 'Gewitter'];
+    return ['—', ''];
+  },
+  /* Open-Meteo first — keyless and CORS-clean. wttr.in is the backup so a
+     single service being down does not blank the corner. */
+  _meteo: function () {
+    var self = this;
+    return getJSON('https://api.open-meteo.com/v1/forecast?latitude=' + this.LAT +
+                   '&longitude=' + this.LON + '&current_weather=true&timezone=auto', 8000)
+      .then(function (d) {
+        var cw = d && d.current_weather;
+        if (!cw || cw.temperature == null) throw new Error('no data');
+        var m = self.wmo(cw.weathercode);
+        return { temp: Math.round(cw.temperature), icon: m[0], desc: m[1], place: 'Nänikon' };
+      });
+  },
+  _wttr: function () {
+    return getJSON('https://wttr.in/47.361,8.719?format=j1', 8000).then(function (d) {
+      var c = d && d.current_condition && d.current_condition[0];
+      if (!c) throw new Error('no data');
+      var desc = ((c.weatherDesc || [])[0] || {}).value || '';
+      var i = /thunder/i.test(desc) ? '⛈' : /snow|sleet/i.test(desc) ? '🌨'
+            : /rain|drizzle|shower/i.test(desc) ? '🌧' : /fog|mist/i.test(desc) ? '🌫'
+            : /partly|sunny interval/i.test(desc) ? '🌤'
+            : /overcast|cloud/i.test(desc) ? '☁' : '☀';
+      return { temp: Math.round(parseFloat(c.temp_C)), icon: i, desc: desc.trim(), place: 'Nänikon' };
+    });
+  },
+  get: function () {
+    var self = this;
+    if (this.cache && Date.now() - this.ts < 30 * 60 * 1000) return Promise.resolve(this.cache);
+    if (this.pending) return this.pending;
+    this.pending = this._meteo()
+      .catch(function () { return self._wttr(); })
+      .then(function (out) {
+        self.pending = null;
+        if (!out || isNaN(out.temp)) return self.cache || null;
+        self.cache = out; self.ts = Date.now();
+        return out;
+      })
+      .catch(function () { self.pending = null; return self.cache || null; });
+    return this.pending;
+  }
+};
 
 /* ============================================================
    STORE — per-user localStorage, fails soft in private mode
@@ -1324,6 +1405,7 @@ var P = {
     document.querySelectorAll('.row').forEach(function (r) {
       r.classList.toggle('playing', !!(t && r.dataset.tid === t.id));
     });
+    if (App.page === 'home') paintHomeHero();
   }
 };
 
@@ -2248,12 +2330,68 @@ function addTo(t) {
    ============================================================ */
 var PAGES = {};
 
+/* ---- Home hero. Greets once; as soon as something plays it turns into the
+   now-playing panel — cover, station/source, artist, title. The weather sits
+   quietly in the corner either way. ---- */
+function wxChip() {
+  var w = Weather.cache;
+  if (!w) return '<div class="wx" id="wxBox"></div>';
+  return '<div class="wx" id="wxBox" title="' + esc(w.desc + ' · ' + w.place + ', Schweiz') + '">' +
+         '<span class="i">' + w.icon + '</span>' + w.temp + '°' +
+         '<span class="pl">' + esc(w.place) + '</span></div>';
+}
+
+function paintHomeHero() {
+  var host = $('#heroBox');
+  if (!host) return;
+  var u = U(), t = P.cur, playing = !!t;
+  var art, meta;
+
+  if (playing) {
+    art = t.art
+      ? '<div class="hero-art"><img src="' + esc(t.art) + '" alt="" onerror="this.parentNode.textContent=\'♪\'"></div>'
+      : '<div class="hero-art">' + (t.live ? '📻' : '♪') + '</div>';
+    /* A live station has no per-song metadata, so the station itself is the
+       headline. An on-demand track leads with its title. */
+    var kopf, titel, unten;
+    if (t.live) {
+      kopf  = 'Radiosender · ' + (t.quality || 'LIVE');
+      titel = t.title;
+      unten = [t.country, t.tags].filter(Boolean).join(' · ') || 'Live';
+    } else {
+      kopf  = 'Es läuft · ' + (t.source || 'Audius');
+      titel = t.title;
+      unten = [t.artist, t.album && t.album !== t.title ? t.album : '', t.year || '']
+                .filter(Boolean).join(' · ');
+    }
+    meta = '<div class="hero-m"><small>' + esc(kopf) + '</small>' +
+           '<h2>' + esc(titel) + '</h2>' +
+           '<p>' + esc(unten) + '</p></div>';
+  } else {
+    art = '<div class="hero-art">' + (App.uid === 'maya' ? '✨' : '◈') + '</div>';
+    meta = '<div class="hero-m"><small>' + esc(gruss()) + '</small>' +
+           '<h2>' + esc(u.name) + '</h2>' +
+           '<p>' + esc(u.seeds.slice(0, 3).join(' · ')) + '</p></div>';
+  }
+
+  host.classList.toggle('np-mode', playing);
+  host.innerHTML = art + meta + wxChip();
+  /* paint from cache above, then refresh — Weather.get() self-limits to one
+     call per half hour, so this is free on every repaint */
+  Weather.get().then(function (w) {
+    var b = $('#wxBox');
+    if (!b || !w) return;
+    b.title = w.desc + ' · ' + w.place + ', Schweiz';
+    b.innerHTML = '<span class="i">' + w.icon + '</span>' + w.temp + '°' +
+                  '<span class="pl">' + esc(w.place) + '</span>';
+  });
+}
+
 PAGES.home = function (page) {
   var u = U();
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art">' + (App.uid === 'maya' ? '✨' : '◈') + '</div>' +
-    '<div><small>Every track plays in full</small><h2>Good ' + dayPart() + ', ' + esc(u.name) + '</h2>' +
-    '<p>' + esc(u.seeds.slice(0, 3).join(' · ')) + '</p></div>'));
+  var hero = el('div', 'hero'); hero.id = 'heroBox';
+  page.appendChild(hero);
+  paintHomeHero();
 
   /* recently played */
   var hist = Store.get(pkey('hist'), []);
@@ -2640,6 +2778,7 @@ PAGES.settings = function (page) {
 };
 
 function dayPart() { var h = new Date().getHours(); return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'; }
+function gruss() { var h = new Date().getHours(); return h < 5 ? 'Gute Nacht' : h < 11 ? 'Guten Morgen' : h < 14 ? 'Guten Tag' : h < 18 ? 'Guten Nachmittag' : 'Guten Abend'; }
 
 /* ============================================================
    NAV / ROUTER
