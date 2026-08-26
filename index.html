@@ -16,7 +16,7 @@
   --line:#dfdbd3;
   --accent:#c25a00; --accent2:#9c4400; --accent-fg:#fff8f0;
   --radius:10px;
-  --bar-h:96px; --side-w:248px;
+  --bar-h:112px; --side-w:248px;
   --f-disp:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;
   --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -121,7 +121,7 @@ h1#ttl{font-family:var(--f-disp);font-size:19px;font-weight:700;letter-spacing:-
 
 /* rows */
 .rows{display:flex;flex-direction:column;gap:1px}
-.row{display:grid;grid-template-columns:30px 42px 1fr auto auto;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:.12s}
+.row{display:grid;grid-template-columns:30px 42px 1fr auto auto auto;align-items:center;gap:12px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:.12s}
 .row:hover{background:var(--bg3)}
 .row.playing{background:var(--bg3)}
 .row.playing .r-t{color:var(--accent)}
@@ -154,9 +154,22 @@ h1#ttl{font-family:var(--f-disp);font-size:19px;font-weight:700;letter-spacing:-
 .seek{display:flex;align-items:center;gap:9px;width:100%}
 .seek span{font-family:var(--f-mono);font-size:10.5px;color:var(--fg3);font-variant-numeric:tabular-nums;width:38px;flex:none}
 .seek span:last-child{text-align:right}
-input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;background:var(--bg4);outline:none;cursor:pointer;flex:1}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--accent)}
-input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
+/* The input is deliberately much taller than the visible bar: the whole height is
+   grabbable, while the track pseudo-element keeps the slim look. */
+input[type=range]{-webkit-appearance:none;appearance:none;height:22px;background:transparent;
+  outline:none;cursor:pointer;flex:1;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--bg4)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--accent);margin-top:-5px;box-shadow:0 1px 4px rgba(0,0,0,.45);transition:transform .12s}
+input[type=range]:hover::-webkit-slider-thumb,input[type=range]:active::-webkit-slider-thumb{transform:scale(1.18)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--bg4)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;
+  background:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.45)}
+/* the scrub bar is the one people miss most, so give it the largest target */
+#seek{height:26px}
+#seek::-webkit-slider-runnable-track{height:7px}
+#seek::-webkit-slider-thumb{width:19px;height:19px;margin-top:-6px}
+#seek::-moz-range-thumb{width:19px;height:19px}
 .pr{display:flex;align-items:center;justify-content:flex-end;gap:11px}
 .np .qb{margin-left:4px;flex:none}
 /* Some hosts pin their own badge to the bottom-right corner (Netlify's is 202x64
@@ -198,49 +211,161 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
 .hero p{font-size:13px;color:var(--fg2)}
 
 @media(max-width:900px){
-  :root{--side-w:0px;--bar-h:132px}
+  :root{--side-w:0px;--bar-h:128px}
   #shell{grid-template-columns:1fr}
   #side{position:fixed;inset:0 auto 0 0;width:250px;z-index:120;transform:translateX(-100%);transition:.24s}
   #side.open{transform:none}
   #scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:110}
   #scrim[hidden]{display:none}
-  #bar{grid-template-columns:1fr;grid-auto-rows:auto;gap:8px;padding:10px 14px;align-content:center}
-  .pr{justify-content:center}
+  #bar{grid-template-columns:1fr;grid-auto-rows:auto;gap:6px;padding:9px 14px;align-content:center}
+  /* On a phone the volume is a hardware button and the meter is decoration, so
+     drop both rather than let them push the bar past the bottom of the screen. */
+  #viz,#vol,.pr>span{display:none}
+  .pr{justify-content:center;gap:0}
+  .pb{width:42px;height:42px;font-size:19px}
+  .pb-play{width:54px;height:54px}
+  .pc-btns{gap:16px}
+  .np img,.np .ph{width:46px;height:46px}
   /* on a narrow screen there is no room for a 212px lane — shift the controls
      left of the badge instead */
-  body.hostbadge .pr{padding-right:0;justify-content:flex-start}
+  body.hostbadge .pr{padding-right:0;justify-content:center}
+  #bFav{position:absolute;right:16px;top:14px}
   #viz{display:none}
   header{padding:12px 16px;gap:10px}
   h1#ttl{display:none}
   #page{padding:16px 16px 30px}
   .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
-  .row{grid-template-columns:36px 1fr auto}
+  .row{grid-template-columns:36px 1fr auto auto}
+  .row .r-fav{opacity:1}
   .r-n,.r-q{display:none}
   .hero{flex-direction:column;align-items:flex-start}
   .hero h2{font-size:22px}
 }
 @media(min-width:901px){#menuBtn,#scrim{display:none}}
+
+
+/* ---------- 1. logo ---------- */
+.logo{width:30px;height:30px;flex:none;display:block}
+
+/* ---------- 6. always-visible user switch ---------- */
+.usr-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg3);
+  border:1px solid var(--line);border-radius:12px;padding:5px}
+.usr-seg button{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:9px;
+  text-align:left;min-width:0;transition:.15s;border:1px solid transparent}
+.usr-seg button:hover{background:var(--bg4)}
+.usr-seg button.on{background:var(--bg1);border-color:var(--line)}
+.usr-seg .av{width:26px;height:26px;font-size:11.5px}
+.usr-seg .un{min-width:0;flex:1}
+.usr-seg .un b{display:block;font-size:12.5px;line-height:1.2}
+.usr-seg .un i{display:block;font-style:normal;font-size:9.5px;color:var(--fg2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr-seg button.on .un b{color:var(--accent)}
+.u-maya .av,.usr-seg button[data-u="maya"] .av{background:linear-gradient(135deg,#ff4d9d,#c65cff)}
+
+/* ---------- 3. search clear ---------- */
+.search-wrap{position:relative}
+#qClear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;
+  border-radius:50%;display:grid;place-items:center;color:var(--fg2);font-size:12px;
+  background:var(--bg4);border:1px solid var(--line);cursor:pointer;transition:.14s}
+#qClear:hover{color:var(--fg);background:var(--bg1)}
+#qClear[hidden]{display:none}
+#q{padding-right:40px}
+
+/* ---------- 4./2. bigger controls, taller bar so nothing clips ---------- */
+.pc-btns{gap:18px}
+.pb{width:38px;height:38px;font-size:18px}
+.pb-play{width:50px;height:50px;font-size:18px}
+.seek{gap:11px}
+.seek span{font-size:11.5px;width:42px}
+
+/* ---------- 5. now-playing detail line ---------- */
+.np-x{display:block;font-family:var(--f-mono);font-size:10px;color:var(--fg3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+/* ---------- 7. favourites block ---------- */
+.fav-hd{display:flex;align-items:center;gap:7px}
+.fav-hd .cnt{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--fg2);
+  background:var(--bg3);border:1px solid var(--line);border-radius:99px;padding:1px 7px}
+.fav-item{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:8px;
+  cursor:pointer;width:100%;text-align:left;min-width:0}
+.fav-item:hover{background:var(--bg3)}
+.fav-item img,.fav-item .ph{width:28px;height:28px;border-radius:5px;object-fit:cover;flex:none;
+  background:var(--bg4);display:grid;place-items:center;font-size:12px}
+.fav-item .m{min-width:0;flex:1}
+.fav-item .m b{display:block;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fav-item .m span{display:block;font-size:10px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fav-empty{font-size:11px;color:var(--fg3);padding:6px 9px;line-height:1.6}
+
+/* ---------- 8. suggestion bubble ---------- */
+#sugg{position:fixed;right:18px;bottom:calc(var(--bar-h) + 16px);width:290px;z-index:80;
+  background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:13px;
+  box-shadow:0 16px 44px rgba(0,0,0,.45);display:flex;gap:11px;align-items:flex-start;
+  opacity:0;transform:translateY(10px);pointer-events:none;transition:.28s}
+#sugg.on{opacity:1;transform:none;pointer-events:auto}
+#sugg .face{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--accent-fg);font-size:17px}
+#sugg .sg{min-width:0;flex:1}
+#sugg .sg small{display:block;font-size:10px;color:var(--fg2);letter-spacing:.06em;text-transform:uppercase}
+#sugg .sg b{display:block;font-size:12.5px;margin:2px 0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sugg .sg i{display:block;font-style:normal;font-size:11px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sugg .acts{display:flex;gap:6px;margin-top:9px}
+#sugg .acts button{font-size:11px;padding:5px 11px;border-radius:99px;border:1px solid var(--line);
+  background:var(--bg3);color:var(--fg);cursor:pointer}
+#sugg .acts button.go{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+#sugg .x{position:absolute;top:7px;right:9px;color:var(--fg3);font-size:11px;cursor:pointer;background:none;border:none}
+
+/* ---------- 4. station cards ---------- */
+.stn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
+.stn{display:flex;align-items:center;gap:11px;padding:11px;border-radius:11px;border:1px solid var(--line);
+  background:var(--bg2);cursor:pointer;text-align:left;transition:.15s;min-width:0}
+.stn:hover{background:var(--bg3);border-color:var(--accent)}
+.stn img,.stn .ph{width:42px;height:42px;border-radius:9px;object-fit:cover;flex:none;background:var(--bg4);
+  display:grid;place-items:center;font-size:18px}
+.stn .m{min-width:0;flex:1}
+.stn .m b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stn .m span{display:block;font-size:10.5px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stn.playing{border-color:var(--accent);background:var(--bg3)}
+.stn.playing .m b{color:var(--accent)}
+
+.r-fav{opacity:0;color:var(--fg2);font-size:16px;transition:.14s;width:30px;height:30px;
+  display:grid;place-items:center;border-radius:50%;background:none;border:none;cursor:pointer;flex:none}
+.row:hover .r-fav{opacity:.75}
+.r-fav:hover{opacity:1;color:#ff4d6d}
+.r-fav.on{opacity:1;color:#ff4d6d}
+#bFav.on{color:#ff4d6d}
 </style>
 </head>
 <body class="u-manuel">
 
 <div id="shell">
   <aside id="side">
-    <div class="brand"><span class="dot">◈</span><span>SOUNDMASCHINE</span></div>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <defs><linearGradient id="lgGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent2)"/>
+        </linearGradient></defs>
+        <rect x="1.5" y="1.5" width="37" height="37" rx="11" fill="url(#lgGrad)"/>
+        <g fill="none" stroke="var(--accent-fg)" stroke-width="2.4" stroke-linecap="round">
+          <path d="M11 20 v-3"/><path d="M15.5 20 v-8"/><path d="M20 20 v-12"/>
+          <path d="M24.5 20 v-8"/><path d="M29 20 v-3"/>
+          <path d="M11 24 v3"/><path d="M15.5 24 v8"/><path d="M20 24 v12"/>
+          <path d="M24.5 24 v8"/><path d="M29 24 v3"/>
+        </g>
+      </svg>
+      <span>SOUNDMASCHINE</span></div>
 
     <div class="usr">
-      <button class="usr-btn" id="usrBtn">
-        <span class="av" id="usrAv">M</span>
-        <span class="usr-meta"><b id="usrName">Manuel</b><span id="usrGen">Alternative · HardCore</span></span>
-        <span style="color:var(--fg3);font-size:10px">▾</span>
-      </button>
-      <div class="usr-menu" id="usrMenu" hidden></div>
+      <div class="usr-seg" id="usrSeg"></div>
     </div>
 
     <nav id="nav"></nav>
 
     <div class="side-sec">
-      <h4>Your Playlists</h4>
+      <h4 class="fav-hd"><span style="color:var(--accent)">♥</span> Favoriten <em class="cnt" id="favCount">0</em></h4>
+      <div id="favList"></div>
+    </div>
+    <div class="side-sec">
+      <h4>Playlists</h4>
       <div id="plList"></div>
     </div>
     <div class="side-foot">No account · No subscription<br>Everything stays in this browser</div>
@@ -250,7 +375,7 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
     <header>
       <button class="hdr-btn" id="menuBtn">☰</button>
       <h1 id="ttl">Home</h1>
-      <div class="search-wrap"><input id="q" placeholder="Search songs, artists, albums…" autocomplete="off"></div>
+      <div class="search-wrap"><input id="q" placeholder="Suche Songs, Künstler, Alben…" autocomplete="off"><button id="qClear" title="Eingabe löschen" hidden>✕</button></div>
       <button class="hdr-btn" id="themeBtn" title="Toggle theme">◐</button>
     </header>
     <div id="page"></div>
@@ -258,10 +383,11 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
 </div>
 <div id="scrim" hidden></div>
 
+
 <div id="bar">
   <div class="np">
     <div class="ph" id="npArt">♪</div>
-    <div class="np-m"><b id="npT">Nothing playing</b><span id="npS">Pick something to start</span></div>
+    <div class="np-m"><b id="npT">Nichts läuft</b><span id="npS">Wähle etwas aus</span><span class="np-x" id="npX"></span></div>
     <span class="qb" id="qBadge">—</span>
   </div>
   <div class="pc">
@@ -279,7 +405,8 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
     </div>
   </div>
   <div class="pr">
-    <canvas id="viz" title="Click to change visualizer mode"></canvas>
+    <button class="pb" id="bFav" title="Favorit">♡</button>
+    <canvas id="viz" title="Click to change meter: Spectrum / RTA / VU / Wave"></canvas>
     <span style="color:var(--fg2);font-size:13px">🔊</span>
     <input type="range" id="vol" min="0" max="100" value="80">
   </div>
@@ -291,6 +418,18 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
      does send CORS, and is the only one wired to the analyser. -->
 <audio id="au" preload="none"></audio>
 <audio id="auX" crossorigin="anonymous" preload="none"></audio>
+<div id="sugg">
+  <button class="x" id="sugX" title="Ausblenden">✕</button>
+  <div class="face">◕</div>
+  <div class="sg">
+    <small id="sugWhy">Vorschlag</small>
+    <b id="sugT">—</b><i id="sugA">—</i>
+    <div class="acts">
+      <button class="go" id="sugGo">Abspielen</button>
+      <button id="sugNext">Anderer</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 <script>
 /* ============================================================
@@ -380,7 +519,7 @@ var Store = {
 var USERS = {
   manuel: {
     name: 'Manuel', initial: 'M', cls: 'u-manuel',
-    blurb: 'Alternative · HardCore · Dub',
+    blurb: 'Alternative · HardCore · Dub', short: 'Alternative · Dub',
     quality: 'lossless',
     lead: 'audius',
     /* Audius search terms */
@@ -394,7 +533,7 @@ var USERS = {
   },
   maya: {
     name: 'Maya', initial: 'My', cls: 'u-maya',
-    blurb: '80s · Rock’n’Roll · Charts',
+    blurb: '80s · Rock’n’Roll · Charts', short: '80s · Charts',
     quality: 'high',
     lead: 'radio',
     seeds: ['80s synthwave', 'rock and roll', 'disco', 'pop hits'],
@@ -488,6 +627,7 @@ var Audius = {
         quality: '320k MP3',
         lossless: false,
         full: true,
+        year: (t.release_date || '').slice(0, 4),
         source: 'Audius'
       };
     });
@@ -573,6 +713,8 @@ var Radio = {
           /* many stations report bitrate 0 — that means unknown, not silent */
           quality: br > 0 ? (br + 'k ' + (s.codec || '').toUpperCase()).trim() : 'LIVE',
           lossless: lossless,
+          country: s.country || '', tags: (s.tags || '').split(',').slice(0, 4).join(', '),
+          home: s.homepage || '',
           source: 'Radio'
         };
       });
@@ -580,6 +722,48 @@ var Radio = {
       return out;
     }).catch(function () { return []; });
   }
+};
+
+
+/* ---- Named stations. The ones asked for by name, plus a few solid extras.
+   Radio Browser is searched by name so the entry stays correct if a station
+   changes its stream URL. ---- */
+Radio.NAMED = [
+  { q: 'Pure Radio Holland', label: 'Pure Radio Holland', note: 'Dutch · Pop & Dance' },
+  { q: 'Lauf.fm',            label: 'Lauf.FM',            note: 'German · Indie & Electronic' },
+  { q: 'SomaFM Underground 80s', label: 'Underground 80s', note: '80s · New Wave' },
+  { q: 'Classic Vinyl HD',   label: 'Classic Vinyl HD',   note: 'Oldies · 320k' },
+  { q: 'BBC Radio 1',        label: 'BBC Radio 1',        note: 'UK · Charts' },
+  { q: 'Radio Paradise',     label: 'Radio Paradise',     note: 'Eclectic · high bitrate' }
+];
+
+Radio.byName = function (name) {
+  var key = 'n' + name;
+  if (this.cache[key]) return Promise.resolve(this.cache[key]);
+  var self = this;
+  var path = '/json/stations/search?limit=8&hidebroken=true&order=votes&reverse=true&name=' +
+             encodeURIComponent(name);
+  var secure = location.protocol === 'https:';
+  return this._try(path, 0).then(function (list) {
+    var ok = (list || []).filter(function (st) {
+      if (!st.url_resolved) return false;
+      return !secure || st.url_resolved.indexOf('https://') === 0;
+    });
+    if (!ok.length) { self.cache[key] = null; return null; }
+    ok.sort(function (a, b) { return (b.bitrate || 0) - (a.bitrate || 0); });
+    var st = ok[0], br = st.bitrate || 0;
+    var out = {
+      id: 'rb' + st.stationuuid, title: st.name.trim(),
+      artist: [st.country, (st.tags || '').split(',').slice(0, 2).join(', ')].filter(Boolean).join(' · '),
+      album: 'Live radio', art: st.favicon || '', url: st.url_resolved,
+      dur: 0, live: true, bitrate: br,
+      quality: br > 0 ? (br + 'k ' + (st.codec || '').toUpperCase()).trim() : 'LIVE',
+      lossless: /flac/i.test(st.codec || ''),
+      country: st.country || '', home: st.homepage || '', source: 'Radio'
+    };
+    self.cache[key] = out;
+    return out;
+  }).catch(function () { return null; });
 };
 
 /* --- Internet Archive: full-length, often lossless --- */
@@ -702,6 +886,7 @@ var Archive = {
           quality: pr >= 5 ? '24-BIT FLAC' : pr === 4 ? 'FLAC' : pr === 3 ? 'WAV' :
                    ((f.format || 'MP3').toUpperCase().indexOf('VBR') >= 0 ? 'VBR MP3' : 'MP3'),
           lossless: isLossless,
+          year: (meta.year || meta.date || '').toString().slice(0, 4),
           source: 'Archive'
         });
       });
@@ -759,6 +944,7 @@ var P = {
     if (a === auCors) Viz.attach(); else Viz.loop();
     this.paint();
     this.history(track);
+    Sugg.schedule();
   },
 
   /* If the crossorigin element cannot load a stream — a CDN that stops sending
@@ -807,12 +993,24 @@ var P = {
       /* new track has no artwork — clear the old one instead of leaving it stale */
       var d = el('div', 'ph', '♪'); d.id = 'npArt'; a.parentNode.replaceChild(d, a);
     }
-    $('#npT').textContent = t ? t.title : 'Nothing playing';
-    $('#npS').textContent = t ? (t.artist + (t.source ? ' · ' + t.source : '')) : 'Pick something to start';
+    $('#npT').textContent = t ? t.title : 'Nichts läuft';
+    $('#npS').textContent = t ? t.artist : 'Wähle etwas aus';
+    var x = $('#npX');
+    if (x) {
+      var bits = [];
+      if (t) {
+        if (t.album && t.album !== t.title) bits.push(t.album);
+        if (t.year) bits.push(t.year);
+        if (t.source) bits.push(t.source);
+        if (t.dur > 0) bits.push(mmss(t.dur));
+      }
+      x.textContent = bits.join('  ·  ');
+    }
     var q = $('#qBadge');
     q.textContent = t ? t.quality : '—';
     q.classList.toggle('loss', !!(t && t.lossless));
     $('#bPlay').textContent = au.paused ? '▶' : '❚❚';
+    syncFavButtons();
     $('#bShuf').classList.toggle('on', this.shuffle);
     $('#bRep').classList.toggle('on', this.repeat > 0);
     $('#bRep').textContent = this.repeat === 2 ? '⟳¹' : '⟳';
@@ -995,9 +1193,120 @@ Viz.cv.onclick = function () {
 };
 Viz.loop();
 
+
+/* ============================================================
+   8. VORSCHLÄGE — aus den zuletzt gehörten Liedern
+   Nimmt die letzten Titel aus der History, leitet daraus eine Suche ab und
+   schlägt etwas vor, das noch nicht gehört wurde.
+   ============================================================ */
+var Sugg = {
+  el: null, cur: null, timer: 0, pool: [], dismissed: false,
+
+  init: function () {
+    this.el = $('#sugg'); if (!this.el) return;
+    var self = this;
+    $('#sugX').onclick = function () { self.hide(); self.dismissed = true; };
+    $('#sugGo').onclick = function () {
+      if (!self.cur) return;
+      P.play(self.cur, self.pool, self.pool.indexOf(self.cur));
+      self.hide();
+    };
+    $('#sugNext').onclick = function () { self.pick(); };
+  },
+
+  reset: function () { this.pool = []; this.cur = null; this.dismissed = false; this.hide(); },
+
+  /* called after a track starts — waits a bit so it never interrupts the moment */
+  schedule: function () {
+    var self = this;
+    clearTimeout(this.timer);
+    if (this.dismissed) return;
+    this.timer = setTimeout(function () { self.build(); }, 25000);
+  },
+
+  /* what did they actually listen to? use the most frequent artist and genre */
+  seed: function () {
+    var hist = Store.get(pkey('hist'), []);
+    if (hist.length < 2) return null;
+    var recent = hist.slice(0, 8);
+    var byArtist = {}, byGenre = {};
+    recent.forEach(function (t) {
+      if (t.artist) byArtist[t.artist] = (byArtist[t.artist] || 0) + 1;
+      if (t.album && t.source === 'Audius') byGenre[t.album] = (byGenre[t.album] || 0) + 1;
+    });
+    var topG = Object.keys(byGenre).sort(function (a, b) { return byGenre[b] - byGenre[a]; })[0];
+    var topA = Object.keys(byArtist).sort(function (a, b) { return byArtist[b] - byArtist[a]; })[0];
+    if (topG) return { q: topG, why: 'Weil du ' + topG + ' hörst' };
+    if (topA) return { q: topA, why: 'Ähnlich wie ' + topA };
+    return null;
+  },
+
+  build: function () {
+    var self = this, sd = this.seed();
+    if (!sd) return;
+    this.why = sd.why;
+    Audius.search(sd.q, 25).then(function (list) {
+      var hist = Store.get(pkey('hist'), []);
+      var heard = {};
+      hist.forEach(function (t) { heard[t.id] = 1; });
+      self.pool = list.filter(function (t) { return !heard[t.id] && (!P.cur || t.id !== P.cur.id); });
+      if (!self.pool.length) return;
+      self.pick();
+    });
+  },
+
+  pick: function () {
+    if (!this.pool.length) return;
+    var i = Math.floor(Math.random() * this.pool.length);
+    this.cur = this.pool[i];
+    $('#sugWhy').textContent = this.why || 'Vorschlag';
+    $('#sugT').textContent = this.cur.title;
+    $('#sugA').textContent = this.cur.artist + ' · ' + mmss(this.cur.dur);
+    this.show();
+  },
+
+  show: function () { if (this.el && !this.dismissed) this.el.classList.add('on'); },
+  hide: function () { if (this.el) this.el.classList.remove('on'); }
+};
+
 /* ============================================================
    RENDER HELPERS
    ============================================================ */
+
+/* ---- Favoriten: eine Liste, ein Tippen ---- */
+function likedList() {
+  return (playlists().filter(function (p) { return p.id === 'liked'; })[0] || { tracks: [] }).tracks;
+}
+function isLiked(t) {
+  return likedList().some(function (x) { return x.id === t.id; });
+}
+function toggleLike(t) {
+  var all = playlists();
+  var liked = all.filter(function (p) { return p.id === 'liked'; })[0];
+  var at = liked.tracks.findIndex(function (x) { return x.id === t.id; });
+  var on;
+  if (at >= 0) { liked.tracks.splice(at, 1); on = false; toast('Aus Favoriten entfernt'); }
+  else { liked.tracks.push(t); on = true; toast('Zu Favoriten hinzugefügt'); }
+  savePl(all);
+  syncFavButtons();
+  return on;
+}
+/* keep every visible heart in step, including the one in the player bar */
+function syncFavButtons() {
+  document.querySelectorAll('.row').forEach(function (r) {
+    var b = r.querySelector('.r-fav'); if (!b) return;
+    var on = likedList().some(function (x) { return x.id === r.dataset.tid; });
+    b.textContent = on ? '♥' : '♡';
+    b.classList.toggle('on', on);
+  });
+  var pb = $('#bFav');
+  if (pb) {
+    var on = !!(P.cur && isLiked(P.cur));
+    pb.textContent = on ? '♥' : '♡';
+    pb.classList.toggle('on', on);
+  }
+}
+
 function trackRow(t, i, list) {
   var r = el('div', 'row');
   r.dataset.tid = t.id;
@@ -1006,9 +1315,17 @@ function trackRow(t, i, list) {
     (t.art ? '<img class="r-a" loading="lazy" src="' + esc(t.art) + '" onerror="this.style.visibility=\'hidden\'">' : '<div class="r-a"></div>') +
     '<div class="r-m"><div class="r-t">' + esc(t.title) + '</div><div class="r-s">' + esc(t.artist) + '</div></div>' +
     '<div class="r-q' + (t.lossless ? ' loss' : '') + '">' + esc(t.quality) + '</div>' +
-    '<button class="r-add" title="Add to playlist">＋</button>';
+    '<button class="r-fav' + (isLiked(t) ? ' on' : '') + '" title="Favorit">' + (isLiked(t) ? '♥' : '♡') + '</button>' +
+    '<button class="r-add" title="Zu Playlist hinzufügen">＋</button>';
   r.onclick = function (e) {
     if (e.target.classList.contains('r-add')) { e.stopPropagation(); addTo(t); return; }
+    if (e.target.classList.contains('r-fav')) {
+      e.stopPropagation();
+      var nowLiked = toggleLike(t);
+      e.target.textContent = nowLiked ? '♥' : '♡';
+      e.target.classList.toggle('on', nowLiked);
+      return;
+    }
     P.play(t, list, i);
   };
   return r;
@@ -1196,22 +1513,56 @@ PAGES.search = function (page) {
 
 PAGES.radio = function (page) {
   page.appendChild(el('div', 'hero',
-    '<div class="hero-art">📻</div><div><small>Full length, always</small>' +
-    '<h2>Radio</h2><p>Live stations tagged for your taste, sorted by bitrate.</p></div>'));
+    '<div class="hero-art">📻</div><div><small>Läuft durchgehend</small>' +
+    '<h2>Radio</h2><p>Feste Sender oben, darunter nach Genre stöbern.</p></div>'));
 
+  /* --- the named stations, each its own card --- */
+  var s1 = section('Deine Sender', 'Direkt anwählbar');
+  var grid = el('div', 'stn-grid'); s1.appendChild(grid);
+  var ld = loading('Sender werden geprüft…'); s1.appendChild(ld);
+  page.appendChild(s1);
+
+  var found = [];
+  Promise.all(Radio.NAMED.map(function (n) {
+    return Radio.byName(n.q).then(function (st) { return st ? { st: st, n: n } : null; });
+  })).then(function (list) {
+    ld.remove();
+    list.filter(Boolean).forEach(function (r) {
+      found.push(r.st);
+      var card = el('button', 'stn',
+        (r.st.art ? '<img src="' + esc(r.st.art) + '" alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'ph\',textContent:\'📻\'}))">'
+                  : '<div class="ph">📻</div>') +
+        '<span class="m"><b>' + esc(r.n.label) + '</b><span>' + esc(r.n.note) + '</span></span>' +
+        '<span class="qb' + (r.st.lossless ? ' loss' : '') + '">' + esc(r.st.quality) + '</span>');
+      card.dataset.tid = r.st.id;
+      card.onclick = function () { P.play(r.st, found, found.indexOf(r.st)); markStations(); };
+      grid.appendChild(card);
+    });
+    if (!grid.children.length) {
+      s1.appendChild(emptyBox('◌', 'Keiner erreichbar', 'Radio Browser hat keinen dieser Sender über HTTPS geliefert.'));
+    }
+    markStations();
+  });
+
+  function markStations() {
+    Array.prototype.forEach.call(grid.children, function (c) {
+      c.classList.toggle('playing', !!(P.cur && c.dataset.tid === P.cur.id));
+    });
+  }
+
+  /* --- genre browsing underneath --- */
   var u = U();
-  var chips = el('div', 'chips');
-  page.appendChild(chips);
-  var host = el('div');
-  page.appendChild(host);
+  var s2 = section('Nach Genre', 'Nach Bitrate sortiert');
+  var chips = el('div', 'chips'); s2.appendChild(chips);
+  var host = el('div'); s2.appendChild(host);
+  page.appendChild(s2);
 
   function load(tag) {
     Array.prototype.forEach.call(chips.children, function (c) { c.classList.toggle('on', c.textContent === tag); });
-    host.innerHTML = ''; host.appendChild(loading('Finding ' + tag + ' stations…'));
+    host.innerHTML = ''; host.appendChild(loading('Suche ' + tag + '…'));
     Radio.byTag(tag, 24).then(function (list) {
       host.innerHTML = '';
-      if (!list.length) { host.appendChild(emptyBox('◌', 'No stations right now', 'Radio Browser returned nothing for “' + esc(tag) + '”. Try another tag.')); return; }
-      /* audiophile first */
+      if (!list.length) { host.appendChild(emptyBox('◌', 'Nichts gefunden', 'Radio Browser hat für „' + esc(tag) + '" nichts geliefert.')); return; }
       list.sort(function (a, b) { return (b.lossless ? 1 : 0) - (a.lossless ? 1 : 0); });
       host.appendChild(rowsBlock(list));
     });
@@ -1445,10 +1796,38 @@ function renderNav() {
 function renderPlSidebar() {
   var h = $('#plList'); h.innerHTML = '';
   playlists().forEach(function (p) {
+    if (p.id === 'liked') return;                 /* favourites get their own block */
     var b = el('button', 'pl-link', '<b>' + esc(p.name) + '</b><em>' + p.tracks.length + '</em>');
     b.onclick = function () { openPlaylist(p.id); closeSide(); };
     h.appendChild(b);
   });
+  if (!h.children.length) h.appendChild(el('div', 'fav-empty', 'Noch keine eigenen Playlists.'));
+  renderFav();
+}
+
+/* Favourites live in their own sidebar block with the newest few visible, so the
+   things you actually liked are one click away instead of behind a playlist. */
+function renderFav() {
+  var host = $('#favList'); if (!host) return;
+  var liked = (playlists().filter(function (p) { return p.id === 'liked'; })[0] || { tracks: [] }).tracks;
+  var cnt = $('#favCount'); if (cnt) cnt.textContent = liked.length;
+  host.innerHTML = '';
+  if (!liked.length) {
+    host.appendChild(el('div', 'fav-empty', 'Noch keine Favoriten. Tippe auf ♥ neben einem Titel.'));
+    return;
+  }
+  liked.slice(-5).reverse().forEach(function (t, i) {
+    var b = el('button', 'fav-item',
+      (t.art ? '<img src="' + esc(t.art) + '" alt="">' : '<div class="ph">♪</div>') +
+      '<span class="m"><b>' + esc(t.title) + '</b><span>' + esc(t.artist) + '</span></span>');
+    b.onclick = function () { P.play(t, liked.slice().reverse(), i); closeSide(); };
+    host.appendChild(b);
+  });
+  if (liked.length > 5) {
+    var all = el('button', 'fav-item', '<span class="m"><b style="color:var(--accent)">Alle ' + liked.length + ' anzeigen →</b></span>');
+    all.onclick = function () { openPlaylist('liked'); closeSide(); };
+    host.appendChild(all);
+  }
 }
 
 function go(p) {
@@ -1488,27 +1867,22 @@ $('#q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { clea
 function renderUser() {
   var u = U();
   document.body.className = u.cls;
-  $('#usrAv').textContent = u.initial;
-  $('#usrName').textContent = u.name;
-  $('#usrGen').textContent = u.blurb;
-
-  var m = $('#usrMenu'); m.innerHTML = '';
+  var seg = $('#usrSeg'); seg.innerHTML = '';
   Object.keys(USERS).forEach(function (k) {
-    var x = USERS[k];
-    var b = el('button', null, '<span class="av" style="width:26px;height:26px;font-size:11px">' + x.initial + '</span>' +
-      '<span style="min-width:0"><b style="display:block;font-size:13px">' + x.name + '</b>' +
-      '<span style="font-size:11px;color:var(--fg2)">' + esc(x.blurb) + '</span></span>');
+    var x = USERS[k], on = (k === App.uid);
+    var b = el('button', on ? 'on' : '', '<span class="av">' + esc(x.initial) + '</span>' +
+      '<span class="un"><b>' + esc(x.name) + '</b><i>' + esc(x.short || x.blurb) + '</i></span>');
+    b.dataset.u = k;
     b.onclick = function () {
+      if (k === App.uid) return;
       App.uid = k; Store.set('user', k);
-      m.hidden = true;
-      renderUser(); renderPlSidebar(); go('home');
-      toast('Switched to ' + x.name);
+      renderUser(); renderPlSidebar(); renderFav(); go('home');
+      Sugg.reset();
+      toast('Jetzt ' + x.name);
     };
-    m.appendChild(b);
+    seg.appendChild(b);
   });
 }
-$('#usrBtn').onclick = function (e) { e.stopPropagation(); $('#usrMenu').hidden = !$('#usrMenu').hidden; };
-document.addEventListener('click', function () { $('#usrMenu').hidden = true; });
 
 /* ---------- theme ---------- */
 function setTheme(t) {
@@ -1600,7 +1974,25 @@ Net.check();
   var origRender = render;
   render = function () { origRender(); if (Net.blocked) Net.banner(); };
 })();
-window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archive: Archive, Viz: Viz, Net: Net };
+window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archive: Archive,
+              Viz: Viz, Net: Net, Sugg: Sugg, isLiked: isLiked, toggleLike: toggleLike };
+
+
+Sugg.init();
+
+/* ---- 3. Suchfeld: Kreuz zum Leeren ---- */
+(function () {
+  var q = $('#q'), x = $('#qClear');
+  if (!q || !x) return;
+  function sync() { x.hidden = !q.value; }
+  q.addEventListener('input', sync);
+  x.onclick = function () {
+    q.value = ''; sync(); q.focus();
+    App.q = '';
+    if (App.page === 'search') render();
+  };
+  sync();
+})();
 
 })();
 
