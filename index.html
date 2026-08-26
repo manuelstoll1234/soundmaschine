@@ -333,6 +333,102 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
 .r-fav:hover{opacity:1;color:#ff4d6d}
 .r-fav.on{opacity:1;color:#ff4d6d}
 #bFav.on{color:#ff4d6d}
+
+/* ---------- ambilight ---------- */
+#ambiLayer{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .9s ease;
+  background:radial-gradient(60% 55% at 18% 12%, var(--ambi-a,transparent) 0%, transparent 70%),
+             radial-gradient(55% 50% at 85% 80%, var(--ambi-b,transparent) 0%, transparent 72%);
+  filter:blur(70px) saturate(1.25)}
+body.ambi #ambiLayer{opacity:.28}
+#shell{position:relative;z-index:1}
+#bar{z-index:70}
+#drawer{z-index:59}
+
+/* ---------- signal drawer ---------- */
+#drwScrim{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  transition:opacity .22s;z-index:58}
+body.drw-open #drwScrim{opacity:1;pointer-events:auto}
+#drawer{position:fixed;top:0;right:0;bottom:var(--bar-h);width:380px;max-width:92vw;z-index:59;
+  background:var(--bg2);border-left:1px solid var(--line);display:flex;flex-direction:column;
+  transform:translateX(102%);transition:transform .26s cubic-bezier(.4,0,.2,1)}
+body.drw-open #drawer{transform:none}
+#drawer header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+#drawer header>b{font-size:15px;flex:none}
+#drwTabs{display:flex;gap:4px;margin-left:auto}
+#drwTabs button{background:none;border:1px solid var(--line);color:var(--fg2);border-radius:99px;
+  padding:4px 11px;font-size:11.5px;cursor:pointer}
+#drwTabs button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+#drwClose{background:none;border:none;color:var(--fg2);font-size:15px;cursor:pointer;padding:4px}
+#drwBody{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:18px}
+#drwBody .sec{margin:0}
+
+.sig-lamp{display:flex;gap:12px;align-items:flex-start;padding:13px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg3)}
+.sig-lamp .lamp{width:11px;height:11px;border-radius:50%;flex:none;margin-top:3px}
+.sig-lamp b{display:block;font-size:12px;letter-spacing:.09em}
+.sig-lamp small{display:block;color:var(--fg2);font-size:11.5px;line-height:1.5;margin-top:3px}
+.sig-lamp.gold .lamp{background:#e8c15a;box-shadow:0 0 10px #e8c15a}
+.sig-lamp.gold b{color:#e8c15a}
+.sig-lamp.green .lamp{background:#4ac97e;box-shadow:0 0 10px #4ac97e}
+.sig-lamp.green b{color:#4ac97e}
+.sig-lamp.grey .lamp{background:#7b7b7b}
+.sig-lamp.grey b{color:var(--fg2)}
+.sig-lamp.blue .lamp{background:#5aa8ff;box-shadow:0 0 10px #5aa8ff}
+.sig-lamp.blue b{color:#5aa8ff}
+
+.sig-chain{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.sig-node{border:1px solid var(--line);background:var(--bg3);border-radius:6px;padding:4px 8px;
+  font-size:10.5px;letter-spacing:.04em;color:var(--fg)}
+.sig-node.off{opacity:.45}
+.sig-arrow{color:var(--fg2);font-size:11px}
+
+.sig-tbl{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.sig-row{display:flex;justify-content:space-between;gap:12px;padding:8px 11px;font-size:12px;
+  border-bottom:1px solid var(--line)}
+.sig-row:last-child{border-bottom:none}
+.sig-row span{color:var(--fg2)}
+.sig-row b{font-weight:600;text-align:right;word-break:break-word}
+.sig-row a{color:var(--accent)}
+
+.lufs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lufs-cell{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--bg3)}
+.lufs-cell small{display:block;color:var(--fg2);font-size:10.5px}
+.lufs-cell b{display:block;font-size:19px;font-variant-numeric:tabular-nums;margin:1px 0}
+.lufs-cell i{font-style:normal;font-size:10px;color:var(--fg2)}
+.lufs-bar{position:relative;height:7px;border-radius:99px;background:var(--bg3);
+  border:1px solid var(--line);margin-top:10px;overflow:hidden}
+#lufsFill{height:100%;width:0;background:var(--accent);transition:width .1s linear}
+#lufsFill.warm{background:#e8c15a}
+#lufsFill.hot{background:#ff5a5a}
+#lufsTarget{position:absolute;top:-3px;width:1px;height:13px;background:var(--fg2)}
+
+.eq-wrap{display:flex;flex-direction:column;gap:7px}
+.eq-band{display:grid;grid-template-columns:34px 1fr 38px;align-items:center;gap:9px}
+.eq-band span{font-size:10.5px;color:var(--fg2)}
+.eq-band b{font-size:11px;text-align:right;font-variant-numeric:tabular-nums}
+.btn-ghost{margin-top:10px;background:none;border:1px solid var(--line);color:var(--fg);
+  border-radius:99px;padding:6px 14px;font-size:12px;cursor:pointer}
+
+.ln-head{display:flex;gap:12px;align-items:center}
+.ln-head img,.ln-head .ph{width:62px;height:62px;border-radius:8px;object-fit:cover;flex:none;
+  background:var(--bg3);display:grid;place-items:center}
+.ln-head b{display:block;font-size:14px;line-height:1.3}
+.ln-head span{display:block;color:var(--fg2);font-size:12px}
+.ln-desc{font-size:12px;line-height:1.65;color:var(--fg2);white-space:pre-wrap}
+.geo-chip{display:flex;align-items:center;gap:8px;margin-top:9px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:9px;background:var(--bg3);font-size:12px}
+.geo-chip .pin{color:var(--accent)}
+.geo-link{margin-left:auto;color:var(--accent);font-size:11.5px}
+.pb.sm{font-size:13px;width:30px;height:30px;opacity:.6}
+.pb.sm:hover{opacity:1}
+.pb.sm.on{opacity:1;color:var(--accent)}
+.muted.small{font-size:11.5px;color:var(--fg2);line-height:1.6}
+@media(max-width:900px){
+  #drawer{width:100%;bottom:0;top:auto;height:78vh;border-left:none;border-top:1px solid var(--line);
+    border-radius:14px 14px 0 0;transform:translateY(102%)}
+  body.drw-open #drawer{transform:none}
+  .pb.sm{display:none}
+}
 </style>
 </head>
 <body class="u-manuel">
@@ -384,6 +480,21 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
 <div id="scrim" hidden></div>
 
 
+<div id="ambiLayer"></div>
+
+<div id="drwScrim"></div>
+<aside id="drawer">
+  <header>
+    <b id="drwTitle">Signal</b>
+    <div id="drwTabs">
+      <button data-tab="signal" class="on">Signal</button>
+      <button data-tab="notes">Infos</button>
+    </div>
+    <button id="drwClose" title="Schliessen">✕</button>
+  </header>
+  <div id="drwBody"></div>
+</aside>
+
 <div id="bar">
   <div class="np">
     <div class="ph" id="npArt">♪</div>
@@ -405,6 +516,9 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
     </div>
   </div>
   <div class="pr">
+    <button class="pb sm" id="bSig" title="Signalweg & Lautheit (i)">◈</button>
+    <button class="pb sm" id="bNotes" title="Infos zum Titel (n)">☰</button>
+    <button class="pb sm" id="bAmbi" title="Ambilight">◐</button>
     <button class="pb" id="bFav" title="Favorit">♡</button>
     <canvas id="viz" title="Click to change meter: Spectrum / RTA / VU / Wave"></canvas>
     <span style="color:var(--fg2);font-size:13px">🔊</span>
@@ -942,6 +1056,8 @@ var P = {
       if (e && e.name === 'NotAllowedError') toast('Press play to start audio');
     });
     if (a === auCors) Viz.attach(); else Viz.loop();
+    Ambilight.apply(track);
+    if (Drawer.open) Drawer.render();
     this.paint();
     this.history(track);
     Sugg.schedule();
@@ -1072,14 +1188,308 @@ $('#bRep').onclick = function () { P.repeat = (P.repeat + 1) % 3; P.paint(); toa
 /* ============================================================
    VISUALIZER — handles the cross-origin taint problem
    ============================================================ */
+/* ============================================================
+   AUDIO ENGINE — signal chain, EBU R128 loudness, signal integrity
+
+   Graph (CORS-clean sources only — see the note on the two elements):
+     MediaElementSource -> gain(normalise/duck) -> EQ biquads -> analyser -> meter -> destination
+
+   Radio streams cannot enter this graph at all: routing an element with no CORS
+   headers through Web Audio makes it output silence. Those keep the plain element
+   and the engine reports "live, not analysable" rather than a dead meter.
+   ============================================================ */
+
+/* ---- EBU R128 / ITU-R BS.1770 loudness, computed off the main thread ----
+   The K-weighting coefficients are derived from the spec's filter design rather
+   than hard-coded for 48 kHz, because AudioContext picks its own sample rate. */
+var LUFS_WORKLET = `
+class R128 extends AudioWorkletProcessor {
+  constructor(){
+    super();
+    const fs = sampleRate;
+    this.s1 = this.shelf(fs); this.s2 = this.hpf(fs);
+    this.st = [];                       // per-channel filter state
+    this.blockLen = Math.round(fs*0.4); // 400 ms block
+    this.hop = Math.round(fs*0.1);      // 75% overlap
+    this.buf = []; this.filled = 0;
+    this.blocks = [];                   // block mean-squares, for gating
+    this.short = [];                    // last 30 hops = 3 s
+    this.tp = 0; this.sp = 0;
+    this.since = 0;
+  }
+  shelf(fs){ const f0=1681.974450955533,G=3.999843853973347,Q=0.7071752369554196;
+    const K=Math.tan(Math.PI*f0/fs), Vh=Math.pow(10,G/20), Vb=Math.pow(Vh,0.4996667741545416);
+    const a0=1+K/Q+K*K;
+    return {b0:(Vh+Vb*K/Q+K*K)/a0, b1:2*(K*K-Vh)/a0, b2:(Vh-Vb*K/Q+K*K)/a0,
+            a1:2*(K*K-1)/a0, a2:(1-K/Q+K*K)/a0}; }
+  hpf(fs){ const f0=38.13547087602444,Q=0.5003270373238773;
+    const K=Math.tan(Math.PI*f0/fs), a0=1+K/Q+K*K;
+    return {b0:1,b1:-2,b2:1, a1:2*(K*K-1)/a0, a2:(1-K/Q+K*K)/a0}; }
+  biq(x,f,s,i){ const y=f.b0*x+f.b1*s[i].x1+f.b2*s[i].x2-f.a1*s[i].y1-f.a2*s[i].y2;
+    s[i].x2=s[i].x1; s[i].x1=x; s[i].y2=s[i].y1; s[i].y1=y; return y; }
+
+  process(inputs){
+    const inp = inputs[0];
+    if (!inp || !inp.length) return true;
+    const n = inp[0].length, ch = inp.length;
+    while (this.st.length < ch) this.st.push({A:[{x1:0,x2:0,y1:0,y2:0}],B:[{x1:0,x2:0,y1:0,y2:0}]});
+    if (!this.buf.length) for (let c=0;c<ch;c++) this.buf.push(new Float32Array(this.blockLen));
+
+    for (let i=0;i<n;i++){
+      for (let c=0;c<ch;c++){
+        const raw = inp[c][i];
+        const a = Math.abs(raw); if (a > this.sp) this.sp = a;
+        // 4x oversample estimate for inter-sample peaks
+        const s = this.st[c];
+        if (s.p1 !== undefined){
+          for (let k=1;k<4;k++){ const t=k/4;
+            const v = Math.abs(s.p1 + (raw - s.p1)*t + 0.5*t*(1-t)*((raw-s.p1)-(s.p1-(s.p0||s.p1))));
+            if (v > this.tp) this.tp = v; }
+        }
+        s.p0 = s.p1; s.p1 = raw;
+        if (a > this.tp) this.tp = a;
+        // K-weight then accumulate
+        const y = this.biq(this.biq(raw, this.s1, s.A, 0), this.s2, s.B, 0);
+        this.buf[c][this.filled] = y;
+      }
+      this.filled++;
+      if (this.filled >= this.blockLen){
+        let power = 0;
+        for (let c=0;c<ch;c++){ let sum=0; const b=this.buf[c];
+          for (let j=0;j<this.blockLen;j++) sum += b[j]*b[j];
+          power += sum/this.blockLen; }              // channel weight 1.0 for L/R
+        this.blocks.push(power);
+        this.short.push(power); if (this.short.length > 30) this.short.shift();
+        // slide by one hop
+        for (let c=0;c<ch;c++) this.buf[c].copyWithin(0, this.hop);
+        this.filled = this.blockLen - this.hop;
+        this.emit(power);
+      }
+    }
+    return true;
+  }
+
+  L(p){ return p > 0 ? -0.691 + 10*Math.log10(p) : -Infinity; }
+
+  emit(momentaryPower){
+    // integrated: absolute gate at -70 LUFS, then relative gate 10 LU down
+    let keep = this.blocks.filter(p => this.L(p) >= -70);
+    let integ = -Infinity;
+    if (keep.length){
+      const mean = keep.reduce((a,b)=>a+b,0)/keep.length;
+      const thr = this.L(mean) - 10;
+      const keep2 = keep.filter(p => this.L(p) >= thr);
+      if (keep2.length) integ = this.L(keep2.reduce((a,b)=>a+b,0)/keep2.length);
+    }
+    const shortP = this.short.length ? this.short.reduce((a,b)=>a+b,0)/this.short.length : 0;
+    this.port.postMessage({
+      m: this.L(momentaryPower),
+      s: this.L(shortP),
+      i: integ,
+      tp: this.tp > 0 ? 20*Math.log10(this.tp) : -Infinity,
+      sp: this.sp > 0 ? 20*Math.log10(this.sp) : -Infinity
+    });
+  }
+}
+registerProcessor('r128', R128);
+`;
+
+var Engine = {
+  ac: null, src: null, gain: null, an: null, meter: null,
+  eq: [], dead: false, ready: false,
+  bands: [60, 250, 1000, 4000, 12000],
+  eqGains: Store.get('eq', [0, 0, 0, 0, 0]),
+  preamp: Store.get('preamp', 0),
+  normalise: Store.get('norm', false),
+  lufs: { m: -Infinity, s: -Infinity, i: -Infinity, tp: -Infinity, sp: -Infinity },
+
+  /* Build once. Everything is wrapped: a failure here must never stop playback. */
+  attach: function () {
+    if (this.dead || this.src) {
+      if (this.ac && this.ac.state === 'suspended') this.ac.resume().catch(function () {});
+      return;
+    }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { this.dead = true; return; }
+      this.ac = new AC();
+      this.src = this.ac.createMediaElementSource(auCors);
+
+      this.gain = this.ac.createGain();
+      this.gain.gain.value = 1;
+
+      var self = this, prev = this.gain;
+      this.eq = this.bands.map(function (f, i) {
+        var b = self.ac.createBiquadFilter();
+        b.type = (i === 0) ? 'lowshelf' : (i === self.bands.length - 1 ? 'highshelf' : 'peaking');
+        b.frequency.value = f; b.Q.value = 1.0;
+        b.gain.value = self.eqGains[i] || 0;
+        prev.connect(b); prev = b;
+        return b;
+      });
+
+      this.an = this.ac.createAnalyser();
+      this.an.fftSize = 2048;                    /* enough bins for a 128-band RTA */
+      this.an.smoothingTimeConstant = 0.75;
+      prev.connect(this.an);
+
+      this.src.connect(this.gain);
+      this.an.connect(this.ac.destination);      /* MUST reconnect or audio goes silent */
+
+      this.data = new Uint8Array(this.an.frequencyBinCount);
+      this.time = new Float32Array(this.an.fftSize);
+      this.ready = true;
+      this._loudness();
+      this.applyEQ();
+    } catch (e) {
+      this.dead = true;                          /* blocked context or double-connect */
+    }
+    if (this.ac && this.ac.state === 'suspended') this.ac.resume().catch(function () {});
+  },
+
+  /* Loudness runs in an AudioWorklet so the main thread stays free for painting.
+     The module is a Blob URL, which keeps the app a single file. */
+  _loudness: function () {
+    var self = this;
+    if (!this.ac.audioWorklet) return;            /* Safari <14.1 — meter stays idle */
+    try {
+      var url = URL.createObjectURL(new Blob([LUFS_WORKLET], { type: 'application/javascript' }));
+      this.ac.audioWorklet.addModule(url).then(function () {
+        URL.revokeObjectURL(url);
+        try {
+          self.meter = new AudioWorkletNode(self.ac, 'r128');
+          self.meter.port.onmessage = function (e) { self.lufs = e.data; };
+          /* tap in parallel: the meter must not sit in the audible path */
+          self.an.connect(self.meter);
+        } catch (e) { /* meter unavailable — everything else still works */ }
+      }).catch(function () {});
+    } catch (e) {}
+  },
+
+  applyEQ: function () {
+    var self = this;
+    if (!this.ready) return;
+    this.eq.forEach(function (b, i) { b.gain.value = self.eqGains[i] || 0; });
+    var lin = Math.pow(10, (this.preamp || 0) / 20);
+    if (this.gain) this.gain.gain.setTargetAtTime(lin, this.ac.currentTime, 0.05);
+    Store.set('eq', this.eqGains); Store.set('preamp', this.preamp);
+  },
+
+  eqActive: function () {
+    return (this.eqGains || []).some(function (g) { return Math.abs(g) > 0.05; }) ||
+           Math.abs(this.preamp || 0) > 0.05;
+  },
+
+  /* Duck the low end briefly — used when a notification-style event fires. */
+  duck: function (ms) {
+    if (!this.ready || !this.gain) return;
+    var t = this.ac.currentTime, g = this.gain.gain;
+    var base = Math.pow(10, (this.preamp || 0) / 20);
+    g.cancelScheduledValues(t);
+    g.setTargetAtTime(base * 0.25, t, 0.04);
+    g.setTargetAtTime(base, t + (ms || 900) / 1000, 0.12);
+  },
+
+  /* What the signal actually went through, for the integrity readout. */
+  path: function (track) {
+    if (!track) return null;
+    var live = track.source === 'Radio';
+    var lossless = !!track.lossless;
+    var srcRate = track.rate || null;                  /* archive gives us this sometimes */
+    var ctxRate = this.ac ? this.ac.sampleRate : null;
+    var processed = this.eqActive();
+    var analysed = !live && this.ready && !this.dead;
+    var grade = live ? 'live' : (!lossless ? 'lossy'
+              : (processed || (srcRate && ctxRate && srcRate !== ctxRate) ? 'lossless' : 'perfect'));
+    return {
+      grade: grade, live: live, lossless: lossless, processed: processed,
+      srcRate: srcRate, ctxRate: ctxRate, analysed: analysed,
+      codec: track.quality || '—',
+      nodes: live
+        ? ['Stream', 'HTML5 Audio', 'Output']
+        : ['Stream', 'Web Audio', processed ? 'EQ · ' + this.eqGains.filter(function(g){return Math.abs(g)>0.05;}).length + ' band' : 'EQ bypassed',
+           'Analyser', 'Output']
+    };
+  }
+};
+
+/* ============================================================
+   VISUAL LAYER — VU meter, RTA spectrogram, ambilight
+   ============================================================ */
+
+/* Dominant-colour extraction. ColorThief would be another dependency and another
+   CDN request; this is ~25 lines of histogram bucketing on a downsampled canvas
+   and gives the same answer for our purposes. */
+var Palette = {
+  cache: {},
+  from: function (url, cb) {
+    if (!url) return cb(null);
+    if (this.cache[url]) return cb(this.cache[url]);
+    var self = this, img = new Image();
+    img.crossOrigin = 'anonymous';               /* required or the canvas taints */
+    img.onload = function () {
+      try {
+        var n = 40, c = document.createElement('canvas');
+        c.width = n; c.height = n;
+        var x = c.getContext('2d', { willReadFrequently: true });
+        x.drawImage(img, 0, 0, n, n);
+        var d = x.getImageData(0, 0, n, n).data;  /* throws if tainted */
+        var buckets = {};
+        for (var i = 0; i < d.length; i += 4) {
+          if (d[i + 3] < 128) continue;
+          var r = d[i], g = d[i + 1], b = d[i + 2];
+          var mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+          if (mx < 26 || mn > 235) continue;      /* skip near-black and near-white */
+          var k = (r >> 4) + ',' + (g >> 4) + ',' + (b >> 4);
+          var e = buckets[k] || (buckets[k] = { n: 0, r: 0, g: 0, b: 0, sat: 0 });
+          e.n++; e.r += r; e.g += g; e.b += b; e.sat += (mx - mn);
+        }
+        var list = Object.keys(buckets).map(function (k) {
+          var e = buckets[k];
+          return { r: e.r / e.n | 0, g: e.g / e.n | 0, b: e.b / e.n | 0,
+                   score: e.n * (1 + (e.sat / e.n) / 90) };   /* favour saturated colour */
+        }).sort(function (a, b2) { return b2.score - a.score; });
+        if (!list.length) return cb(null);
+        var out = { a: list[0], b: list[1] || list[0] };
+        self.cache[url] = out;
+        cb(out);
+      } catch (e) { cb(null); }                   /* cross-origin image without CORS */
+    };
+    img.onerror = function () { cb(null); };
+    img.src = url;
+  }
+};
+
+var Ambilight = {
+  on: Store.get('ambi', true),
+  apply: function (track) {
+    var root = document.documentElement;
+    if (!this.on || !track) { this.clear(); return; }
+    Palette.from(track.art, function (p) {
+      if (!p) { Ambilight.clear(); return; }
+      root.style.setProperty('--ambi-a', 'rgb(' + p.a.r + ',' + p.a.g + ',' + p.a.b + ')');
+      root.style.setProperty('--ambi-b', 'rgb(' + p.b.r + ',' + p.b.g + ',' + p.b.b + ')');
+      document.body.classList.add('ambi');
+    });
+  },
+  clear: function () { document.body.classList.remove('ambi'); },
+  toggle: function () {
+    this.on = !this.on; Store.set('ambi', this.on);
+    if (this.on) this.apply(P.cur); else this.clear();
+    return this.on;
+  }
+};
+
+/* ---- the meter canvas: four modes, all 60fps, all driven off one rAF ---- */
 var Viz = {
-  cv: $('#viz'), ctx: null, ac: null, an: null, src: null, data: null,
-  raf: 0, dead: false, zeros: 0, mode: App.vizMode || 0,
-  modes: ['bars', 'wave', 'pulse'],
+  cv: $('#viz'), ctx: null, raf: 0, w: 0, h: 0,
+  mode: App.vizMode || 0,
+  modes: ['bars', 'rta', 'vu', 'wave'],
+  labels: { bars: 'Spectrum', rta: 'RTA 128', vu: 'VU', wave: 'Wave' },
+  vu: { l: 0, r: 0, peak: 0, peakAt: 0 },
 
   size: function () {
-    var r = this.cv.getBoundingClientRect();
-    var d = window.devicePixelRatio || 1;
+    var r = this.cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
     if (!r.width) return;
     this.cv.width = r.width * d; this.cv.height = r.height * d;
     this.ctx = this.cv.getContext('2d');
@@ -1087,59 +1497,31 @@ var Viz = {
     this.w = r.width; this.h = r.height;
   },
 
-  /* Only ever wires #auX (archive.org, CORS-clean). createMediaElementSource can be
-     called once per element and permanently routes it, so this must never touch the
-     plain element — doing so would mute every non-CORS stream. */
-  attach: function () {
-    if (this.dead) { this.loop(); return; }
-    if (this.src) {
-      if (this.ac && this.ac.state === 'suspended') this.ac.resume().catch(function () {});
-      this.loop(); return;
-    }
-    try {
-      var AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) { this.dead = true; this.loop(); return; }
-      this.ac = new AC();
-      this.an = this.ac.createAnalyser();
-      this.an.fftSize = 128;
-      this.an.smoothingTimeConstant = 0.8;
-      this.src = this.ac.createMediaElementSource(auCors);
-      this.src.connect(this.an);
-      this.an.connect(this.ac.destination);   /* MUST reconnect or audio goes silent */
-      this.data = new Uint8Array(this.an.frequencyBinCount);
-    } catch (e) {
-      /* blocked context or double-connect — never let this kill playback */
-      this.dead = true;
-    }
-    if (this.ac && this.ac.state === 'suspended') this.ac.resume().catch(function () {});
-    this.loop();
-  },
+  attach: function () { Engine.attach(); this.loop(); },
 
   loop: function () {
     cancelAnimationFrame(this.raf);
     var self = this;
-    (function frame() {
-      self.raf = requestAnimationFrame(frame);
-      self.draw();
-    })();
+    (function frame() { self.raf = requestAnimationFrame(frame); self.draw(); })();
   },
 
-  read: function () {
-    /* real spectrum only while the analyser-wired element is the one playing */
-    if (this.dead || !this.an || au !== auCors) return null;
-    this.an.getByteFrequencyData(this.data);
-    /* cross-origin streams silently produce all-zero data — detect and simulate */
-    var sum = 0;
-    for (var i = 0; i < this.data.length; i++) sum += this.data[i];
-    if (sum === 0) { if (++this.zeros > 90) this.dead = true; return null; }
-    this.zeros = 0;
-    return this.data;
+  /* real data only while the analyser-wired element is the one playing */
+  freq: function () {
+    if (!Engine.ready || Engine.dead || au !== auCors) return null;
+    Engine.an.getByteFrequencyData(Engine.data);
+    var sum = 0, d = Engine.data;
+    for (var i = 0; i < d.length; i += 8) sum += d[i];
+    if (sum === 0) return null;
+    return d;
+  },
+  wave: function () {
+    if (!Engine.ready || Engine.dead || au !== auCors) return null;
+    Engine.an.getFloatTimeDomainData(Engine.time);
+    return Engine.time;
   },
 
-  sim: function () {
-    /* believable fallback so the panel never looks broken */
-    var n = 32, out = new Uint8Array(n), t = Date.now() / 220;
-    var live = !au.paused;
+  sim: function (n) {
+    var out = new Uint8Array(n), t = Date.now() / 220, live = !au.paused;
     for (var i = 0; i < n; i++) {
       var f = 1 - i / n;
       out[i] = live ? Math.max(0, (Math.sin(t + i * 0.55) * 0.5 + 0.5) * 190 * (0.35 + f * 0.8)) : 0;
@@ -1147,50 +1529,347 @@ var Viz = {
     return out;
   },
 
+  accent: function () {
+    return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e8a13a';
+  },
+
   draw: function () {
     if (!this.ctx) { this.size(); if (!this.ctx) return; }
-    var d = this.read() || this.sim();
     var c = this.ctx, w = this.w, h = this.h;
-    var cs = getComputedStyle(document.body);
-    var acc = cs.getPropertyValue('--accent').trim() || '#00e06a';
     c.clearRect(0, 0, w, h);
+    var m = this.modes[this.mode] || 'bars';
+    if (m === 'vu') return this.drawVU(c, w, h);
+    if (m === 'rta') return this.drawRTA(c, w, h);
+    if (m === 'wave') return this.drawWave(c, w, h);
+    this.drawBars(c, w, h);
+  },
 
-    var m = this.modes[this.mode];
-    if (m === 'bars') {
-      var n = Math.min(26, d.length), bw = w / n;
-      for (var i = 0; i < n; i++) {
-        var v = d[Math.floor(i * d.length / n)] / 255;
-        var bh = Math.max(1.5, v * h * 0.92);
-        c.fillStyle = acc;
-        c.globalAlpha = 0.35 + v * 0.65;
-        c.fillRect(i * bw + 0.6, h - bh, bw - 1.4, bh);
-      }
-      c.globalAlpha = 1;
-    } else if (m === 'wave') {
-      c.strokeStyle = acc; c.lineWidth = 1.6; c.beginPath();
-      for (var j = 0; j < d.length; j++) {
-        var x = (j / (d.length - 1)) * w;
-        var y = h / 2 - ((d[j] / 255) - 0.34) * h * 0.85;
-        j ? c.lineTo(x, y) : c.moveTo(x, y);
-      }
-      c.stroke();
-    } else {
-      var avg = 0; for (var k = 0; k < d.length; k++) avg += d[k];
-      avg = avg / d.length / 255;
-      var r = Math.min(w, h) * (0.16 + avg * 0.34);
-      c.beginPath(); c.arc(w / 2, h / 2, r, 0, Math.PI * 2);
-      c.fillStyle = acc; c.globalAlpha = 0.22 + avg * 0.6; c.fill();
-      c.globalAlpha = 1; c.strokeStyle = acc; c.lineWidth = 1.4; c.stroke();
+  drawBars: function (c, w, h) {
+    var d = this.freq(), n = 28, acc = this.accent();
+    var src = d || this.sim(n);
+    var bw = w / n;
+    for (var i = 0; i < n; i++) {
+      var idx = d ? Math.floor(Math.pow(i / n, 1.6) * (d.length * 0.7)) : i;
+      var v = (src[idx] || 0) / 255;
+      var bh = Math.max(1.5, v * h);
+      c.fillStyle = acc;
+      c.globalAlpha = 0.45 + v * 0.55;
+      c.fillRect(i * bw, h - bh, bw - 1.2, bh);
     }
+    c.globalAlpha = 1;
+  },
+
+  /* 128-band real-time analyser, log-spaced like a proper RTA */
+  drawRTA: function (c, w, h) {
+    var d = this.freq(), N = 128, acc = this.accent();
+    var src = d || this.sim(N);
+    var bw = w / N;
+    for (var i = 0; i < N; i++) {
+      var idx = d ? Math.floor(Math.pow(i / N, 2.0) * (d.length - 1)) : i;
+      var v = (src[idx] || 0) / 255;
+      var bh = Math.max(1, v * h);
+      /* cool at the bottom, accent at the top — reads as level, not decoration */
+      c.fillStyle = v > 0.82 ? '#ff5a5a' : (v > 0.6 ? acc : 'rgba(255,255,255,.34)');
+      c.fillRect(i * bw, h - bh, Math.max(0.8, bw - 0.4), bh);
+    }
+  },
+
+  drawWave: function (c, w, h) {
+    var t = this.wave(), acc = this.accent();
+    c.strokeStyle = acc; c.lineWidth = 1.4; c.beginPath();
+    if (t) {
+      for (var i = 0; i < t.length; i += 4) {
+        var x = (i / t.length) * w, y = h / 2 + t[i] * h * 0.46;
+        i ? c.lineTo(x, y) : c.moveTo(x, y);
+      }
+    } else {
+      var s = this.sim(64);
+      for (var j = 0; j < 64; j++) {
+        var x2 = (j / 64) * w, y2 = h / 2 + ((s[j] - 95) / 255) * h * 0.7;
+        j ? c.lineTo(x2, y2) : c.moveTo(x2, y2);
+      }
+    }
+    c.stroke();
+  },
+
+  /* Analog needle with VU ballistics — 300 ms to full deflection, per the standard */
+  drawVU: function (c, w, h) {
+    var lv = Engine.lufs, acc = this.accent();
+    var db = (lv && isFinite(lv.m)) ? lv.m : null;
+    /* map -40..0 LUFS onto 0..1; fall back to the simulated bar energy */
+    var target;
+    if (db != null) target = Math.max(0, Math.min(1, (db + 40) / 40));
+    else { var s = this.sim(8), sum = 0; for (var i = 0; i < 8; i++) sum += s[i];
+           target = Math.min(1, sum / (8 * 255) * 1.6); }
+    this.vu.l += (target - this.vu.l) * 0.16;              /* ~300ms rise at 60fps */
+    if (this.vu.l > this.vu.peak) { this.vu.peak = this.vu.l; this.vu.peakAt = Date.now(); }
+    else if (Date.now() - this.vu.peakAt > 900) this.vu.peak *= 0.94;
+
+    var cx = w / 2, cy = h * 1.06, R = Math.min(w * 0.46, h * 0.92);
+    /* arc */
+    c.strokeStyle = 'rgba(255,255,255,.16)'; c.lineWidth = 1;
+    c.beginPath(); c.arc(cx, cy, R, Math.PI * 1.18, Math.PI * 1.82); c.stroke();
+    /* red zone */
+    c.strokeStyle = 'rgba(255,90,90,.55)'; c.lineWidth = 2;
+    c.beginPath(); c.arc(cx, cy, R, Math.PI * 1.66, Math.PI * 1.82); c.stroke();
+    /* peak ghost */
+    var pa = Math.PI * (1.18 + 0.64 * this.vu.peak);
+    c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(cx + Math.cos(pa) * R * 0.55, cy + Math.sin(pa) * R * 0.55);
+    c.lineTo(cx + Math.cos(pa) * R, cy + Math.sin(pa) * R); c.stroke();
+    /* needle */
+    var a = Math.PI * (1.18 + 0.64 * this.vu.l);
+    c.strokeStyle = this.vu.l > 0.75 ? '#ff5a5a' : acc; c.lineWidth = 1.8;
+    c.beginPath(); c.moveTo(cx, cy);
+    c.lineTo(cx + Math.cos(a) * R * 0.94, cy + Math.sin(a) * R * 0.94); c.stroke();
+    c.fillStyle = acc; c.beginPath(); c.arc(cx, cy, 2.2, 0, 6.3); c.fill();
+  },
+
+  cycle: function () {
+    this.mode = (this.mode + 1) % this.modes.length;
+    Store.set('viz', this.mode);
+    toast(this.labels[this.modes[this.mode]]);
   }
 };
+
+/* ============================================================
+   SIGNAL DRAWER — integrity readout, R128 meters, EQ, liner notes
+   ============================================================ */
+var Drawer = {
+  open: false, raf: 0, tab: 'signal',
+
+  toggle: function (tab) {
+    if (tab && tab !== this.tab && this.open) { this.tab = tab; this.render(); return; }
+    this.open = !this.open;
+    if (tab) this.tab = tab;
+    document.body.classList.toggle('drw-open', this.open);
+    if (this.open) { this.render(); this.tick(); }
+    else cancelAnimationFrame(this.raf);
+  },
+
+  tick: function () {
+    var self = this;
+    cancelAnimationFrame(this.raf);
+    (function f() {
+      self.raf = requestAnimationFrame(f);
+      if (self.tab === 'signal') self.paintMeters();
+    })();
+  },
+
+  db: function (v, unit) {
+    return (v == null || !isFinite(v)) ? '—' : v.toFixed(1) + (unit || '');
+  },
+
+  render: function () {
+    var host = $('#drwBody');
+    if (!host) return;
+    $('#drwTitle').textContent = this.tab === 'signal' ? 'Signal' : 'Liner notes';
+    var tabs = $('#drwTabs');
+    [].forEach.call(tabs.children, function (b) {
+      b.classList.toggle('on', b.dataset.tab === Drawer.tab);
+    });
+    host.innerHTML = '';
+    if (this.tab === 'signal') this.renderSignal(host); else this.renderNotes(host);
+  },
+
+  renderSignal: function (host) {
+    var t = P.cur, p = Engine.path(t);
+    if (!t) { host.appendChild(emptyBox('◌', 'Nothing playing', 'Start a track to see its signal path.')); return; }
+
+    /* --- integrity lamp. Honest about what a browser can and cannot promise. --- */
+    var lamp = {
+      perfect: ['gold', 'BIT-PERFECT PATH', 'Lossless source, no DSP, no resampling in our graph.'],
+      lossless: ['green', 'LOSSLESS', p && p.processed ? 'Lossless source, but EQ is engaged — the signal is being altered.'
+                                                       : 'Lossless source, resampled by the audio context.'],
+      lossy: ['grey', 'LOSSY', 'Compressed source. Nothing downstream can restore what the encoder discarded.'],
+      live: ['blue', 'LIVE STREAM', 'Radio cannot enter the Web Audio graph without going silent, so it plays untouched and unmeasured.']
+    }[p ? p.grade : 'lossy'];
+
+    var box = el('div', 'sig-lamp ' + lamp[0],
+      '<div class="lamp"></div><div><b>' + lamp[1] + '</b><small>' + lamp[2] + '</small></div>');
+    host.appendChild(box);
+
+    /* --- the actual chain --- */
+    var chain = el('div', 'sig-chain');
+    (p ? p.nodes : []).forEach(function (n, i) {
+      if (i) chain.appendChild(el('span', 'sig-arrow', '→'));
+      chain.appendChild(el('span', 'sig-node' + (/bypass/i.test(n) ? ' off' : ''), esc(n)));
+    });
+    host.appendChild(section('Signal path').appendChild(chain).parentNode);
+
+    /* --- facts --- */
+    var rows = [
+      ['Source', t.source],
+      ['Format', p ? p.codec : '—'],
+      ['Context rate', p && p.ctxRate ? (p.ctxRate / 1000).toFixed(1) + ' kHz' : '—'],
+      ['DSP', p && p.processed ? 'EQ engaged' : 'Bypassed'],
+      ['Analysis', p && p.analysed ? 'Active' : 'Unavailable on this source']
+    ];
+    var tbl = el('div', 'sig-tbl');
+    rows.forEach(function (r) {
+      tbl.appendChild(el('div', 'sig-row', '<span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b>'));
+    });
+    host.appendChild(tbl);
+
+    /* --- R128 meters --- */
+    var s = section('Loudness', 'EBU R128 · K-weighted, gated');
+    var g = el('div', 'lufs-grid');
+    ['m', 's', 'i'].forEach(function (k) {
+      var lab = { m: 'Momentary', s: 'Short (3s)', i: 'Integrated' }[k];
+      g.appendChild(el('div', 'lufs-cell', '<small>' + lab + '</small><b id="lufs-' + k + '">—</b><i>LUFS</i>'));
+    });
+    g.appendChild(el('div', 'lufs-cell', '<small>True peak</small><b id="lufs-tp">—</b><i>dBTP</i>'));
+    s.appendChild(g);
+    s.appendChild(el('div', 'lufs-bar', '<div id="lufsFill"></div><span id="lufsTarget" title="Streaming reference level"></span>'));
+    if (!(p && p.analysed)) {
+      s.appendChild(el('p', 'muted small', 'Radio streams send no CORS headers. Routing one through Web Audio would silence it, so it plays on a separate untouched element and cannot be measured.'));
+    }
+    host.appendChild(s);
+
+    /* --- EQ --- */
+    var e = section('Equaliser', Engine.eqActive() ? 'Engaged — signal is altered' : 'Bypassed');
+    var wrap = el('div', 'eq-wrap');
+    Engine.bands.forEach(function (f, i) {
+      var row = el('div', 'eq-band');
+      var lbl = f >= 1000 ? (f / 1000) + 'k' : f + '';
+      row.innerHTML = '<span>' + lbl + '</span>';
+      var inp = el('input'); inp.type = 'range'; inp.min = -12; inp.max = 12; inp.step = 0.5;
+      inp.value = Engine.eqGains[i] || 0;
+      var out = el('b', null, (Engine.eqGains[i] || 0) + '');
+      inp.oninput = function () {
+        Engine.eqGains[i] = parseFloat(inp.value);
+        out.textContent = inp.value;
+        Engine.applyEQ();
+        Drawer.render();
+      };
+      row.appendChild(inp); row.appendChild(out);
+      wrap.appendChild(row);
+    });
+    e.appendChild(wrap);
+    var reset = el('button', 'btn-ghost', 'Flat');
+    reset.onclick = function () {
+      Engine.eqGains = [0, 0, 0, 0, 0]; Engine.preamp = 0; Engine.applyEQ(); Drawer.render();
+    };
+    e.appendChild(reset);
+    host.appendChild(e);
+  },
+
+  paintMeters: function () {
+    var l = Engine.lufs || {};
+    var set = function (id, v, u) { var n = $(id); if (n) n.textContent = Drawer.db(v, u); };
+    set('#lufs-m', l.m); set('#lufs-s', l.s); set('#lufs-i', l.i); set('#lufs-tp', l.tp);
+    var fill = $('#lufsFill');
+    if (fill) {
+      var v = isFinite(l.s) ? l.s : (isFinite(l.m) ? l.m : -60);
+      var pct = Math.max(0, Math.min(100, ((v + 40) / 40) * 100));
+      fill.style.width = pct + '%';
+      fill.className = v > -9 ? 'hot' : (v > -16 ? 'warm' : '');
+    }
+    var tgt = $('#lufsTarget');
+    if (tgt) tgt.style.left = (((-14 + 40) / 40) * 100) + '%';   /* -14 LUFS streaming target */
+  },
+
+  /* ---- liner notes: whatever the source genuinely carries, nothing invented ---- */
+  renderNotes: function (host) {
+    var t = P.cur;
+    if (!t) { host.appendChild(emptyBox('◌', 'Nothing playing', 'Start a track to read its notes.')); return; }
+
+    var head = el('div', 'ln-head',
+      (t.art ? '<img src="' + esc(t.art) + '" alt="">' : '<div class="ph">♪</div>') +
+      '<div><b>' + esc(t.title) + '</b><span>' + esc(t.artist) + '</span>' +
+      (t.album ? '<span class="muted">' + esc(t.album) + '</span>' : '') + '</div>');
+    host.appendChild(head);
+
+    var facts = [];
+    if (t.source === 'Radio') {
+      facts = [['Station', t.title], ['Country', t.country || '—'], ['Language', t.lang || '—'],
+               ['Codec', t.quality], ['Tags', t.tags || '—'], ['Homepage', t.home || '—']];
+    } else if (t.source === 'Audius') {
+      facts = [['Artist', t.artist], ['Genre', t.album || '—'], ['Length', mmss(t.dur)],
+               ['Format', t.quality], ['Licence', 'Artist-uploaded, streamed via Audius']];
+    } else {
+      facts = [['Collection', t.album || '—'], ['Year', t.year || '—'], ['Format', t.quality],
+               ['Length', mmss(t.dur)], ['Source', 'Internet Archive']];
+    }
+    var tbl = el('div', 'sig-tbl');
+    facts.forEach(function (r) {
+      if (!r[1] || r[1] === '—') return;
+      var v = /^https?:/.test(r[1]) ? '<a href="' + esc(r[1]) + '" target="_blank" rel="noopener">' + esc(r[1]) + '</a>' : esc(r[1]);
+      tbl.appendChild(el('div', 'sig-row', '<span>' + esc(r[0]) + '</span><b>' + v + '</b>'));
+    });
+    host.appendChild(tbl);
+
+    if (t.desc) {
+      var d = section('Notes');
+      d.appendChild(el('p', 'ln-desc', esc(String(t.desc).replace(/<[^>]+>/g, '')).slice(0, 1400)));
+      host.appendChild(d);
+    }
+
+    /* MusicBrainz is keyless and has real origin data — but only for artists that
+       are actually in it, which for netlabel and indie uploads is a minority.
+       Ask, and simply say nothing if there is nothing to say. */
+    var s = section('Artist origin', 'MusicBrainz');
+    var ld = loading(); s.appendChild(ld); host.appendChild(s);
+    MB.artist(t.artist, function (info) {
+      ld.remove();
+      if (!info) { s.appendChild(el('p', 'muted small', 'No MusicBrainz entry for this artist — usual for netlabel and self-released music.')); return; }
+      var rows = el('div', 'sig-tbl');
+      [['Name', info.name], ['Origin', info.area], ['Formed', info.begin], ['Type', info.type]]
+        .forEach(function (r) {
+          if (!r[1]) return;
+          rows.appendChild(el('div', 'sig-row', '<span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b>'));
+        });
+      s.appendChild(rows);
+      if (info.area) s.appendChild(Geo.chip(info.area));
+    });
+  }
+};
+
+/* keyless, rate-limited to one request per second per their policy */
+var MB = {
+  cache: {}, last: 0,
+  artist: function (name, cb) {
+    if (!name || name === 'Unknown') return cb(null);
+    if (this.cache[name] !== undefined) return cb(this.cache[name]);
+    var self = this, wait = Math.max(0, 1100 - (Date.now() - this.last));
+    setTimeout(function () {
+      self.last = Date.now();
+      var u = 'https://musicbrainz.org/ws/2/artist?fmt=json&limit=1&query=' + encodeURIComponent(name);
+      getJSON(u, 9000).then(function (d) {
+        var a = d && d.artists && d.artists[0];
+        /* the search is fuzzy — reject a weak match rather than show the wrong artist */
+        if (!a || a.score < 90 || a.name.toLowerCase() !== String(name).toLowerCase()) {
+          self.cache[name] = null; return cb(null);
+        }
+        var out = { name: a.name, type: a.type || '',
+                    area: (a.area && a.area.name) || (a['begin-area'] && a['begin-area'].name) || '',
+                    begin: (a['life-span'] && a['life-span'].begin) || '' };
+        self.cache[name] = out; cb(out);
+      }).catch(function () { self.cache[name] = null; cb(null); });
+    }, wait);
+  }
+};
+
+/* A place chip rather than a tile map: Leaflet plus OSM tiles would be two new
+   dependencies and a third-party request on every track, for a field that is
+   empty for most of this catalogue. */
+var Geo = {
+  chip: function (area) {
+    var w = el('div', 'geo-chip');
+    w.innerHTML = '<span class="pin">◉</span><b>' + esc(area) + '</b>';
+    var a = el('a', 'geo-link', 'Open map ↗');
+    a.href = 'https://www.openstreetmap.org/search?query=' + encodeURIComponent(area);
+    a.target = '_blank'; a.rel = 'noopener';
+    w.appendChild(a);
+    return w;
+  }
+};
+
+
+/* ---- meter boot ---- */
 Viz.size();
 window.addEventListener('resize', function () { Viz.size(); });
-Viz.cv.onclick = function () {
-  Viz.mode = (Viz.mode + 1) % Viz.modes.length;
-  Store.set('viz', Viz.mode);
-  toast('Visualizer: ' + Viz.modes[Viz.mode]);
-};
+Viz.cv.onclick = function () { Viz.cycle(); };
 Viz.loop();
 
 
@@ -1975,8 +2654,35 @@ Net.check();
   render = function () { origRender(); if (Net.blocked) Net.banner(); };
 })();
 window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archive: Archive,
-              Viz: Viz, Net: Net, Sugg: Sugg, isLiked: isLiked, toggleLike: toggleLike };
+              Viz: Viz, Net: Net, Sugg: Sugg, isLiked: isLiked, toggleLike: toggleLike,
+              Engine: Engine, Drawer: Drawer, Ambilight: Ambilight, Palette: Palette, MB: MB };
 
+
+
+/* ---- Signal-Drawer verkabeln ---- */
+(function () {
+  var t = $('#drwTabs');
+  if (t) [].forEach.call(t.children, function (b) {
+    b.onclick = function () { Drawer.tab = b.dataset.tab; Drawer.render(); };
+  });
+  var c = $('#drwClose'); if (c) c.onclick = function () { Drawer.toggle(); };
+  var sc = $('#drwScrim'); if (sc) sc.onclick = function () { Drawer.toggle(); };
+  var sig = $('#bSig'); if (sig) sig.onclick = function () { Drawer.toggle('signal'); };
+  var nts = $('#bNotes'); if (nts) nts.onclick = function () { Drawer.toggle('notes'); };
+  var amb = $('#bAmbi');
+  if (amb) {
+    amb.classList.toggle('on', Ambilight.on);
+    amb.onclick = function () {
+      amb.classList.toggle('on', Ambilight.toggle());
+      toast('Ambilight ' + (Ambilight.on ? 'an' : 'aus'));
+    };
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+    if (e.key === 'i' || e.key === 'I') Drawer.toggle('signal');
+    if (e.key === 'n' || e.key === 'N') Drawer.toggle('notes');
+  });
+})();
 
 Sugg.init();
 
