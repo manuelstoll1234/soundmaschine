@@ -288,9 +288,10 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
 /* ============================================================
    SOUNDMASCHINE — single-file music app
    Sources (all keyless + CORS-safe from a browser):
-     iTunes Search  : metadata, album art, 30s AAC previews
-     Radio Browser  : full-length live streams (incl. high-bitrate)
-     Internet Archive: full-length tracks, incl. FLAC / lossless
+     Audius          : complete tracks, 320k MP3, keyless
+     Internet Archive: complete albums, incl. FLAC / lossless
+     Radio Browser   : live stations, continuous
+   Nothing here serves a clip. There is no preview source by design.
    ============================================================ */
 (function () {
 'use strict';
@@ -327,7 +328,7 @@ function getJSON(url, ms) {
     .finally(function () { clearTimeout(to); });
 }
 
-/* JSONP — iTunes supports ?callback=, our bulletproof fallback if CORS ever fails */
+/* JSONP — last-resort fallback for any endpoint that supports ?callback= */
 var jsonpN = 0;
 function jsonp(url, ms) {
   return new Promise(function (res, rej) {
@@ -365,22 +366,38 @@ var Store = {
 /* ============================================================
    USERS
    ============================================================ */
+/* Every tag below was checked against the live services — none of them come back
+   empty, and none of them lead to a clip. `lead` says which source opens Home,
+   because Audius carries Manuel's genres and radio carries Maya's. */
 var USERS = {
   manuel: {
     name: 'Manuel', initial: 'M', cls: 'u-manuel',
-    blurb: 'Alternative · HardCore',
+    blurb: 'Alternative · HardCore · Dub',
     quality: 'lossless',
-    seeds: ['Lee Scratch Perry', 'Alternative rock', 'Hardcore punk', 'Drum and bass', 'Dub reggae', 'Ska'],
-    tags: ['reggae', 'dub', 'hardcore', 'drum and bass', 'alternative', 'punk', 'ska', 'dubstep'],
-    archive: ['dub reggae', 'punk live', 'alternative rock live', 'roots reggae']
+    lead: 'audius',
+    /* Audius search terms */
+    seeds: ['drum and bass', 'hardcore', 'dub reggae', 'alternative rock', 'dubstep', 'jungle'],
+    /* Audius genre facets — each verified to return 10/10 streamable tracks */
+    genres: ['Drum & Bass', 'Dubstep', 'Reggae', 'Punk', 'Jungle', 'Alternative'],
+    /* Radio Browser tags */
+    tags: ['reggae', 'dub', 'drum and bass', 'hardcore', 'alternative', 'punk', 'ska', 'dubstep'],
+    /* Internet Archive queries — full albums, mostly lossless */
+    archive: ['dub reggae', 'roots reggae', 'netlabel electronic', 'punk live', 'alternative rock live']
   },
   maya: {
     name: 'Maya', initial: 'My', cls: 'u-maya',
-    blurb: '80s · Rock · Schlager',
+    blurb: '80s · Rock’n’Roll · Charts',
     quality: 'high',
-    seeds: ['80s hits', 'Rock and roll', 'Schlager', 'Top charts', 'Disco', 'Oldies'],
-    tags: ['80s', 'schlager', 'rock', 'oldies', 'pop', 'charts', 'disco', 'top 40'],
-    archive: ['1980s pop', 'rock and roll 1950s', 'schlager', 'oldies radio']
+    lead: 'radio',
+    seeds: ['80s synthwave', 'rock and roll', 'disco', 'pop hits'],
+    genres: ['Disco', 'Pop', 'Rock', 'Funk', 'Vaporwave', 'House'],
+    tags: ['80s', 'oldies', 'disco', 'charts', 'pop', 'rock', 'top 40', '70s'],
+    /* the Great 78 Project is real originals from the 78rpm era — full length,
+       digitised losslessly, and exactly where Rock'n'Roll actually lives */
+    archive: ['collection:(georgeblood) AND rock and roll',
+              'collection:(georgeblood) AND rhythm and blues',
+              'collection:(georgeblood) AND swing',
+              '1980s pop']
   }
 };
 
@@ -405,35 +422,96 @@ function savePl(p) { Store.set(pkey('pl'), p); renderPlSidebar(); }
 /* ============================================================
    SOURCES
    ============================================================ */
-var art600 = function (u) { return u ? u.replace(/\/\d+x\d+bb?\./, '/600x600bb.') : ''; };
-
-/* --- iTunes: metadata + art + 30s preview --- */
-var iTunes = {
+/* --- Audius: full-length tracks, 320k MP3, keyless.
+       Verified: /v1/tracks/{id}/stream answers 206 with audio/mpeg, redirects to a
+       content node, honours Range (so seeking works) and sends CORS headers. --- */
+var Audius = {
   cache: {},
-  search: function (term, limit) {
-    var key = 't' + term + (limit || 25);
-    if (this.cache[key]) return Promise.resolve(this.cache[key]);
-    var url = 'https://itunes.apple.com/search?media=music&entity=song&limit=' + (limit || 25) +
-              '&term=' + encodeURIComponent(term);
+  APP: 'SOUNDMASCHINE',
+  hosts: ['https://discoveryprovider2.audius.co', 'https://discoveryprovider3.audius.co', 'https://api.audius.co'],
+  hi: 0,
+
+  _url: function (host, path, params) {
+    var u = host + path + '?app_name=' + encodeURIComponent(this.APP);
+    for (var k in params) if (params[k] != null && params[k] !== '') {
+      u += '&' + k + '=' + encodeURIComponent(params[k]);
+    }
+    return u;
+  },
+
+  /* walk the host list until one answers */
+  _get: function (path, params, n) {
     var self = this;
-    return getJSON(url)
-      .catch(function () { return jsonp(url); })          // CORS fallback
-      .then(function (d) {
-        var out = (d && d.results ? d.results : []).filter(function (r) { return r.previewUrl; }).map(function (r) {
-          return {
-            id: 'it' + r.trackId,
-            title: r.trackName,
-            artist: r.artistName,
-            album: r.collectionName || '',
-            art: art600(r.artworkUrl100),
-            url: r.previewUrl,
-            dur: (r.trackTimeMillis || 30000) / 1000,
-            clip: 30,
-            quality: 'PREVIEW',
-            lossless: false,
-            source: 'iTunes'
-          };
-        });
+    n = n || 0;
+    if (n >= this.hosts.length) return Promise.resolve(null);
+    var host = this.hosts[(this.hi + n) % this.hosts.length];
+    return getJSON(this._url(host, path, params), 11000)
+      .then(function (d) { self.hi = (self.hi + n) % self.hosts.length; return { d: d, host: host }; })
+      .catch(function () { return self._get(path, params, n + 1); });
+  },
+
+  streamUrl: function (host, id) {
+    return this._url(host, '/v1/tracks/' + id + '/stream', {});
+  },
+
+  _map: function (list, host) {
+    var self = this;
+    return (list || []).filter(function (t) {
+      if (!t || !t.id) return false;
+      /* Audius search happily returns tracks whose audio is gone — they look fine
+         (title, artwork, play counts) but the stream 404s. `is_streamable` is the
+         flag that actually tracks this; `is_delete` alone misses some. */
+      if (t.is_streamable === false) return false;
+      if (t.is_delete) return false;
+      if (t.is_available === false) return false;
+      if (t.is_unlisted) return false;
+      /* full length only — nothing clipped */
+      return (t.duration == null || t.duration >= 45);
+    }).map(function (t) {
+      var a = t.artwork || {};
+      return {
+        id: 'au' + t.id,
+        title: t.title || 'Untitled',
+        artist: (t.user && (t.user.name || t.user.handle)) || 'Unknown',
+        album: t.genre || '',
+        art: a['480x480'] || a['1000x1000'] || a['150x150'] || '',
+        url: self.streamUrl(host, t.id),
+        dur: t.duration || 0,
+        quality: '320k MP3',
+        lossless: false,
+        full: true,
+        source: 'Audius'
+      };
+    });
+  },
+
+  search: function (term, limit) {
+    limit = limit || 25;
+    var key = 's' + term + limit;
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    var self = this;
+    /* dead entries can be most of a result page, so ask for far more than we show */
+    return this._get('/v1/tracks/search', { query: term, limit: Math.min(100, limit * 5) })
+      .then(function (r) {
+        if (!r || !r.d || !r.d.data) return [];
+        var out = self._map(r.d.data, r.host).slice(0, limit);
+        self.cache[key] = out;
+        return out;
+      })
+      .catch(function () { return []; });
+  },
+
+  /* Trending is the reliable shelf: every genre checked returned 10/10 live
+     tracks, where plain search can be 90% dead. */
+  trending: function (genre, limit) {
+    limit = limit || 12;
+    var key = 'g' + (genre || '') + limit;
+    if (this.cache[key]) return Promise.resolve(this.cache[key]);
+    var self = this;
+    return this._get('/v1/tracks/trending', { genre: genre || '', limit: Math.min(50, limit * 2), time: 'month' })
+      .then(function (r) {
+        if (!r || !r.d || !r.d.data) return [];
+        var out = self._map(r.d.data, r.host).slice(0, limit);
         self.cache[key] = out;
         return out;
       })
@@ -467,6 +545,12 @@ var Radio = {
            content and the station would just fail silently. Drop them up front. */
         if (securePage && s.url_resolved.indexOf('https://') !== 0) return false;
         return true;
+      }).filter(function (s, i, arr) {
+        /* same station, several registrations — keep the highest bitrate one */
+        var k = (s.name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+        return arr.findIndex(function (o) {
+          return (o.name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '') === k;
+        }) === i;
       }).slice(0, limit || 20).map(function (s) {
         var br = s.bitrate || 0;
         var lossless = /flac/i.test(s.codec || '') || br >= 320;
@@ -477,8 +561,9 @@ var Radio = {
           album: 'Live radio',
           art: s.favicon || '',
           url: s.url_resolved,
-          dur: 0, live: true,
-          quality: br ? (br + 'k ' + (s.codec || '').toUpperCase()).trim() : 'LIVE',
+          dur: 0, live: true, bitrate: br,
+          /* many stations report bitrate 0 — that means unknown, not silent */
+          quality: br > 0 ? (br + 'k ' + (s.codec || '').toUpperCase()).trim() : 'LIVE',
           lossless: lossless,
           source: 'Radio'
         };
@@ -542,43 +627,84 @@ var Archive = {
         if (fmt.indexOf('mp3') >= 0 || fmt.indexOf('m4a') >= 0 || fmt.indexOf('aac') >= 0) return 1;
         return 0;
       };
-      /* group by track title, keep best format per track */
-      var best = {};
+      /* An Archive item usually carries the SAME recording several times over —
+         FLAC, VBR MP3, 64kbps MP3, Ogg — under different filenames. Listing each
+         encoding separately turns a 16-track album into 48 rows, so group every
+         encoding of one recording together and keep only the best. */
+      var clean = function (s) {
+        return String(s || '')
+          .replace(/\.[^.]+$/, '')
+          .replace(/_/g, ' ')
+          /* drop any parenthetical that is really a format note, not part of the name:
+             "(True CD Quality)", "(320 kBPs)", "(VBR MP3)" */
+          .replace(/\s*\([^)]*(?:kbps|cd quality|lossless|vbr|flac|wave?|mp3|ogg)[^)]*\)/ig, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+      };
+      /* Every encoding of one recording shares a filename stem; Archive only appends
+         a derivative suffix (_64kb, _vbr…). The stem is therefore the reliable join —
+         track numbers are not, because FLAC derivatives often carry no track tag. */
+      var stem = function (name) {
+        return String(name || '')
+          .replace(/\.[^.]+$/, '')
+          .replace(/[_-](?:\d{2,3}kb(?:ps)?|vbr|sample|spectrogram|preview)$/i, '')
+          .toLowerCase().replace(/[^a-z0-9]+/g, '');
+      };
+      var groupKey = function (f) {
+        var s = stem(f.name);
+        if (s) return 'f' + s;
+        var t = parseInt(String(f.track || '').split('/')[0], 10);
+        if (!isNaN(t)) return 'n' + t;
+        return 't' + clean(f.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      };
+
+      var groups = {};
       files.forEach(function (f) {
         var r = rank(f);
         if (!r) return;
-        /* group the formats of one recording under a shared base name */
-        var base = (f.name || '').replace(/\.[^.]+$/, '');
-        if (!best[base] || rank(best[base].f) < r) best[base] = { f: f, r: r };
+        var k = groupKey(f);
+        (groups[k] || (groups[k] = [])).push({ f: f, r: r });
       });
-      var out = [];
-      Object.keys(best).forEach(function (base) {
-        var entry = best[base];
-        var f = entry.f;
-        /* FLAC decodes natively in Chrome, Firefox, Edge and Safari 11+, so keep it —
-           that is what actually delivers lossless playback rather than downgrading to mp3 */
-        var playable = files.filter(function (g) {
-          return (g.name || '').replace(/\.[^.]+$/, '') === base && /\.(flac|wav|m4a|ogg|mp3)$/i.test(g.name || '');
-        }).sort(function (a, b) { return rank(b) - rank(a); })[0] || f;
 
-        var pr = rank(playable);
+      var out = [];
+      Object.keys(groups).forEach(function (k) {
+        var members = groups[k].sort(function (a, b) { return b.r - a.r; });
+        var pick = members[0];                       /* best available encoding */
+        var f = pick.f, pr = pick.r;
+
+        /* prefer a human title from any encoding over a raw filename */
+        var titles = members.map(function (m) { return clean(m.f.title || ''); })
+                            .filter(Boolean)
+                            .sort(function (a, b) { return a.length - b.length; });
+        var title = titles[0] || clean(f.name);
+
+        var lenSrc = members.filter(function (m) { return m.f.length; })[0];
+        /* the best encoding may carry no track tag — borrow it from a sibling */
+        var numSrc = members.filter(function (m) { return m.f.track; })[0];
         var isLossless = pr >= 3;
         out.push({
-          id: 'ia' + identifier + '/' + base,
-          title: (f.title || base).replace(/_/g, ' '),
+          id: 'ia' + identifier + '/' + k,
+          n: numSrc ? (parseInt(String(numSrc.f.track).split('/')[0], 10) || null) : null,
+          title: title,
           artist: meta.creator ? [].concat(meta.creator).join(', ') : (meta.title || 'Internet Archive'),
           album: meta.title || identifier,
           art: 'https://archive.org/services/img/' + identifier,
-          url: 'https://archive.org/download/' + identifier + '/' + encodeURIComponent(playable.name),
-          dur: parseLen(f.length),
+          url: 'https://archive.org/download/' + identifier + '/' + encodeURIComponent(f.name),
+          dur: lenSrc ? parseLen(lenSrc.f.length) : 0,
           quality: pr >= 5 ? '24-BIT FLAC' : pr === 4 ? 'FLAC' : pr === 3 ? 'WAV' :
-                   ((playable.format || 'MP3').toUpperCase().indexOf('VBR') >= 0 ? 'VBR MP3' : 'MP3'),
+                   ((f.format || 'MP3').toUpperCase().indexOf('VBR') >= 0 ? 'VBR MP3' : 'MP3'),
           lossless: isLossless,
           source: 'Archive'
         });
       });
-      out.sort(function (a, b) { return a.id.localeCompare(b.id, void 0, { numeric: true }); });
-      out = out.slice(0, 60);
+      /* track order when the item numbers its tracks, else alphabetical */
+      out.sort(function (a, b) {
+        if (a.n && b.n) return a.n - b.n;
+        if (a.n) return -1;
+        if (b.n) return 1;
+        return a.title.localeCompare(b.title, void 0, { numeric: true });
+      });
+      out = out.slice(0, 80);
       self.cache[key] = out;
       return out;
     }).catch(function () { return []; });
@@ -592,10 +718,12 @@ var auPlain = $('#au'), auCors = $('#auX');
 var ALL = [auPlain, auCors];
 var au = auPlain;               /* the element currently in charge */
 
-/* archive.org serves CORS headers, so its files can go through the analyser.
-   Everything else uses the plain element, where Web Audio would mute them. */
-function pickElement(track) {
-  var want = (track && track.source === 'Archive') ? auCors : auPlain;
+/* Archive and Audius both serve CORS headers, so they can go through the analyser
+   and get a real spectrum. Radio streams do not, and routing those through Web
+   Audio would mute them, so they stay on the plain element. */
+var CORS_OK = { Archive: 1, Audius: 1 };
+function pickElement(track, forcePlain) {
+  var want = (!forcePlain && track && CORS_OK[track.source]) ? auCors : auPlain;
   if (want !== au) {
     try { au.pause(); } catch (e) {}
     au.removeAttribute('src');
@@ -609,20 +737,30 @@ var P = {
   queue: [], idx: -1, shuffle: false, repeat: 0, /* 0 off 1 all 2 one */
   cur: null,
 
-  play: function (track, queue, i) {
+  play: function (track, queue, i, forcePlain) {
     if (queue) { this.queue = queue.slice(); this.idx = (i == null ? 0 : i); }
     else if (!this.queue.length) { this.queue = [track]; this.idx = 0; }
     this.cur = track;
-    var a = pickElement(track);
+    this.retried = !!forcePlain;
+    var a = pickElement(track, forcePlain);
     a.src = track.url;
     var p = a.play();
     if (p && p.catch) p.catch(function (e) {
       if (e && e.name === 'NotAllowedError') toast('Press play to start audio');
-      else toast('Could not start that one — skipping');
     });
     if (a === auCors) Viz.attach(); else Viz.loop();
     this.paint();
     this.history(track);
+  },
+
+  /* If the crossorigin element cannot load a stream — a CDN that stops sending
+     CORS headers, say — retry once on the plain element before giving up. The
+     spectrum is worth less than the track playing. */
+  recover: function () {
+    var t = this.cur;
+    if (!t || this.retried || au !== auCors) return false;
+    this.play(t, null, null, true);
+    return true;
   },
 
   toggle: function () {
@@ -687,6 +825,7 @@ ALL.forEach(function (a) {
   });
   a.addEventListener('error', function () {
     if (a !== au || !P.cur || !a.getAttribute('src')) return;
+    if (P.recover()) return;              /* one retry without the analyser */
     toast('That stream would not load — skipping');
     setTimeout(function () { P.step(1); }, 700);
   });
@@ -918,8 +1057,8 @@ PAGES.home = function (page) {
   var u = U();
   page.appendChild(el('div', 'hero',
     '<div class="hero-art">' + (App.uid === 'maya' ? '✨' : '◈') + '</div>' +
-    '<div><small>Your mix</small><h2>Good ' + dayPart() + ', ' + esc(u.name) + '</h2>' +
-    '<p>' + esc(u.seeds.slice(0, 3).join(' · ')) + ' — tuned to what you listen to.</p></div>'));
+    '<div><small>Every track plays in full</small><h2>Good ' + dayPart() + ', ' + esc(u.name) + '</h2>' +
+    '<p>' + esc(u.seeds.slice(0, 3).join(' · ')) + '</p></div>'));
 
   /* recently played */
   var hist = Store.get(pkey('hist'), []);
@@ -929,27 +1068,79 @@ PAGES.home = function (page) {
     page.appendChild(s0);
   }
 
-  /* recommendations per seed genre */
-  u.seeds.slice(0, 4).forEach(function (seed) {
-    var s = section(seed, 'Recommended for you');
+  /* Maya's genres live on the radio dial; Manuel's live on Audius. Lead with
+     whichever actually carries this person's music. */
+  if (u.lead === 'radio') homeRadio(page, u); else homeTracks(page, u);
+  homeArchive(page, u);
+  if (u.lead === 'radio') homeTracks(page, u); else homeRadio(page, u);
+};
+
+/* full-length on-demand tracks */
+function homeTracks(page, u) {
+  u.genres.slice(0, 3).forEach(function (genre) {
+    var s = section(genre, 'Full tracks · Audius');
     var g = el('div', 'grid'); s.appendChild(g);
     var ld = loading(); s.appendChild(ld);
     page.appendChild(s);
-    iTunes.search(seed, 10).then(function (list) {
+    Audius.trending(genre, 10).then(function (list) {
       ld.remove();
-      if (!list.length) { g.remove(); s.appendChild(emptyBox('◌', 'Nothing came back', 'The search service did not respond for “' + esc(seed) + '”.')); return; }
+      if (!list.length) { g.remove(); s.appendChild(emptyBox('◌', 'Nothing came back', 'Audius returned no tracks for ' + esc(genre) + '.')); return; }
       list.forEach(function (t, i) {
-        g.appendChild(card({ title: t.title, sub: t.artist, art: t.art, tag: '30s' }, function () { P.play(t, list, i); }));
+        g.appendChild(card({ title: t.title, sub: t.artist, art: t.art, tag: mmss(t.dur) },
+          function () { P.play(t, list, i); }));
       });
     });
   });
-};
+}
+
+/* live stations — continuous by definition */
+function homeRadio(page, u) {
+  var s = section('Stations for you', 'Live · plays continuously');
+  var b = el('div'); s.appendChild(b); b.appendChild(loading());
+  page.appendChild(s);
+  Promise.all(u.tags.slice(0, 3).map(function (t) { return Radio.byTag(t, 5); }))
+    .then(function (lists) {
+      /* the same station is often registered several times under different uuids,
+         so collapse on the name rather than the id */
+      var seen = {}, all = [];
+      lists.forEach(function (l) {
+        l.forEach(function (st) {
+          var k = st.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
+          if (!seen[k]) { seen[k] = 1; all.push(st); }
+        });
+      });
+      b.innerHTML = '';
+      if (!all.length) { b.appendChild(emptyBox('◌', 'No stations right now', 'Radio Browser returned nothing for your tags.')); return; }
+      all.sort(function (a, b2) { return (b2.bitrate || 0) - (a.bitrate || 0); });
+      b.appendChild(rowsBlock(all.slice(0, 10)));
+    });
+}
+
+/* complete albums, frequently lossless */
+function homeArchive(page, u) {
+  var q = u.archive[0];
+  var s = section(App.uid === 'maya' ? 'Rock’n’Roll originals' : 'Full albums',
+                  App.uid === 'maya' ? 'Great 78 Project · digitised from the original shellac'
+                                     : 'Internet Archive · complete, often lossless');
+  var g = el('div', 'grid'); s.appendChild(g);
+  var ld = loading(); s.appendChild(ld);
+  page.appendChild(s);
+  Archive.search(q, 10).then(function (items) {
+    ld.remove();
+    if (!items.length) { g.remove(); s.appendChild(emptyBox('◌', 'Nothing found', 'The Archive returned nothing for this shelf.')); return; }
+    items.forEach(function (it) {
+      g.appendChild(card({ title: it.title, sub: it.artist + (it.year ? ' · ' + it.year : ''), art: it.art, icon: '⌗', tag: 'FULL' },
+        function () { openArchive(it); }));
+    });
+  });
+}
 
 PAGES.search = function (page) {
   if (!App.q) {
     page.appendChild(emptyBox('⌕', 'Search everything',
-      'Type an artist, song or album above. Results come from <b>iTunes</b> (art + 30&nbsp;second previews), ' +
-      '<b>Internet Archive</b> (full-length, often lossless) and <b>Radio Browser</b> (live stations).'));
+      'Type an artist, song or genre above. Every result plays in full — ' +
+      '<b>Audius</b> (complete tracks, 320k), <b>Internet Archive</b> (full albums, often lossless) ' +
+      'and <b>Radio Browser</b> (live stations). No clips anywhere.'));
     /* quick genre chips */
     var chips = el('div', 'chips');
     U().seeds.concat(U().tags.slice(0, 4)).forEach(function (g) {
@@ -963,16 +1154,16 @@ PAGES.search = function (page) {
 
   var q = App.q;
 
-  var s1 = section('Songs', 'iTunes · 30 second previews, full album art');
+  var s1 = section('Tracks', 'Audius · complete tracks, 320k');
   var b1 = el('div'); s1.appendChild(b1); b1.appendChild(loading());
   page.appendChild(s1);
-  iTunes.search(q, 24).then(function (list) {
+  Audius.search(q, 24).then(function (list) {
     b1.innerHTML = '';
-    if (!list.length) { b1.appendChild(emptyBox('◌', 'No songs found', 'Try a different spelling, or just the artist name.')); return; }
+    if (!list.length) { b1.appendChild(emptyBox('◌', 'No tracks found', 'Try the artist name on its own, or a genre like dub, jungle or synthwave.')); return; }
     b1.appendChild(rowsBlock(list));
   });
 
-  var s2 = section('Full length & lossless', 'Internet Archive — complete tracks, no clips');
+  var s2 = section('Albums & lossless', 'Internet Archive — complete records');
   var g2 = el('div', 'grid'); s2.appendChild(g2);
   var l2 = loading(); s2.appendChild(l2);
   page.appendChild(s2);
@@ -998,7 +1189,7 @@ PAGES.search = function (page) {
 PAGES.radio = function (page) {
   page.appendChild(el('div', 'hero',
     '<div class="hero-art">📻</div><div><small>Full length, always</small>' +
-    '<h2>Radio</h2><p>Live stations tagged for your taste. These stream complete — no 30 second limit.</p></div>'));
+    '<h2>Radio</h2><p>Live stations tagged for your taste, sorted by bitrate.</p></div>'));
 
   var u = U();
   var chips = el('div', 'chips');
@@ -1169,9 +1360,9 @@ PAGES.settings = function (page) {
   var s1 = el('div', 'set');
   s1.innerHTML =
     '<h3>Where the music comes from</h3>' +
-    '<p>All three sources are free and need no account or API key.</p>' +
-    '<div class="set-row"><div><b>iTunes Search</b><small>Album art, metadata, 30-second AAC previews</small></div><span class="qb">PREVIEW</span></div>' +
-    '<div class="set-row"><div><b>Internet Archive</b><small>Complete tracks — live sets, netlabels, often FLAC / 24-bit</small></div><span class="qb loss">LOSSLESS</span></div>' +
+    '<p>All three are free, keyless, and every one of them plays a track from start to finish. Nothing here serves a 30-second clip.</p>' +
+    '<div class="set-row"><div><b>Audius</b><small>Complete tracks, streamed end to end</small></div><span class="qb">320k MP3</span></div>' +
+    '<div class="set-row"><div><b>Internet Archive</b><small>Complete albums — live sets, netlabels, Great 78 originals, often FLAC</small></div><span class="qb loss">LOSSLESS</span></div>' +
     '<div class="set-row"><div><b>Radio Browser</b><small>Live stations, continuous playback, up to 320k and FLAC</small></div><span class="qb">LIVE</span></div>';
   page.appendChild(s1);
 
@@ -1351,7 +1542,7 @@ document.addEventListener('keydown', function (e) {
 var Net = {
   blocked: false,
   check: function () {
-    var probe = 'https://itunes.apple.com/search?media=music&limit=1&term=music';
+    var probe = 'https://archive.org/metadata/messian_dread_-_reasonings_in_dub_-_2006_net_album';
     var self = this;
     return getJSON(probe, 9000)
       .catch(function () { return jsonp(probe, 9000); })
@@ -1362,7 +1553,7 @@ var Net = {
     if (document.getElementById('netbanner')) return;
     var b = el('div', null,
       '<b>This page cannot reach the music services.</b>' +
-      '<p>SOUNDMASCHINE loads everything live from iTunes, the Internet Archive and Radio Browser. ' +
+      '<p>SOUNDMASCHINE loads everything live from Audius, the Internet Archive and Radio Browser. ' +
       'The preview sandbox on claude.ai blocks outside requests, so nothing can load here. ' +
       'Open <code>index.html</code> from your own machine, or put it on Netlify, and it works normally.</p>');
     b.id = 'netbanner';
@@ -1386,7 +1577,7 @@ Net.check();
   var origRender = render;
   render = function () { origRender(); if (Net.blocked) Net.banner(); };
 })();
-window.SM = { App: App, P: P, Store: Store, iTunes: iTunes, Radio: Radio, Archive: Archive, Viz: Viz };
+window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archive: Archive, Viz: Viz, Net: Net };
 
 })();
 
