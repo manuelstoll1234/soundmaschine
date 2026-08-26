@@ -158,6 +158,11 @@ input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radi
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--accent)}
 input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
 .pr{display:flex;align-items:center;justify-content:flex-end;gap:11px}
+.np .qb{margin-left:4px;flex:none}
+/* Some hosts pin their own badge to the bottom-right corner (Netlify's is 202x64
+   at the maximum z-index) and it lands straight on the volume slider. When one is
+   detected, clear a lane for it rather than letting it swallow the controls. */
+body.hostbadge .pr{padding-right:212px}
 .qb{font-family:var(--f-mono);font-size:9.5px;font-weight:600;letter-spacing:.4px;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--fg2);white-space:nowrap}
 .qb.loss{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 #vol{width:82px;flex:none}
@@ -201,6 +206,9 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
   #scrim[hidden]{display:none}
   #bar{grid-template-columns:1fr;grid-auto-rows:auto;gap:8px;padding:10px 14px;align-content:center}
   .pr{justify-content:center}
+  /* on a narrow screen there is no room for a 212px lane — shift the controls
+     left of the badge instead */
+  body.hostbadge .pr{padding-right:0;justify-content:flex-start}
   #viz{display:none}
   header{padding:12px 16px;gap:10px}
   h1#ttl{display:none}
@@ -254,6 +262,7 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
   <div class="np">
     <div class="ph" id="npArt">♪</div>
     <div class="np-m"><b id="npT">Nothing playing</b><span id="npS">Pick something to start</span></div>
+    <span class="qb" id="qBadge">—</span>
   </div>
   <div class="pc">
     <div class="pc-btns">
@@ -271,7 +280,6 @@ select{padding:6px 11px;border-radius:7px;background:var(--bg3);border:1px solid
   </div>
   <div class="pr">
     <canvas id="viz" title="Click to change visualizer mode"></canvas>
-    <span class="qb" id="qBadge">—</span>
     <span style="color:var(--fg2);font-size:13px">🔊</span>
     <input type="range" id="vol" min="0" max="100" value="80">
   </div>
@@ -1566,6 +1574,21 @@ var Net = {
     page.insertBefore(b, page.firstChild);
   }
 };
+
+/* A host-injected badge (Netlify's, for one) is pinned to the bottom-right corner
+   above everything. It appears after our script runs, so look for it once the page
+   settles and reserve space rather than letting it cover the volume control. */
+(function watchHostBadge() {
+  var SEL = '#nl-badge-frame,[id*="badge-frame"],[class*="badge-frame"]';
+  function check() {
+    if (document.querySelector(SEL)) { document.body.classList.add('hostbadge'); return true; }
+    return false;
+  }
+  if (check()) return;
+  var tries = 0;
+  var iv = setInterval(function () { if (check() || ++tries > 12) clearInterval(iv); }, 500);
+  window.addEventListener('load', check);
+})();
 
 /* ---------- boot ---------- */
 renderUser();
