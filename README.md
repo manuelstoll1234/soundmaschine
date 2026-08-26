@@ -1,88 +1,57 @@
-# SOUNDMASCHINE - Free Music Streaming App
+# SOUNDMASCHINE
 
-Free music streaming application with dual user profiles, high-quality audio, and no subscriptions required.
+Free music streaming for Manuel and Maya. One HTML file, no build step, no API keys, no account, no subscription.
 
-## Features
+## Run it
 
-- **Spotify/Tidal-like functionality** - Search, playlists, recommendations
-- **Multiple music sources** - Last.fm, Deezer, YouTube, Internet Radio
-- **Dual user profiles** - Manuel & Maya with personalized preferences
-- **High-quality audio** - Up to lossless FLAC quality
-- **Playlists & Library** - Create, manage, and share playlists
-- **Music visualization** - Real-time audio visualization (3 modes)
-- **Lyrics display** - Song lyrics from Genius API
-- **Internet radio** - Pure Radio Holland, Lauf.FM, BBC Radio 1 and more
-- **100% offline capable** - All data stored locally (LocalStorage)
-- **No account required** - Complete privacy-first approach
-- **Dark/Light themes** - Responsive design (mobile/tablet/desktop)
+Open `index.html` in any browser. That's the whole install.
 
-## Quick Start
+It must be served over `http://` or `https://`, or opened as a local file — it will not work inside a sandboxed preview frame, because it loads everything live from three public services.
 
-1. Open `index.html` in your web browser
-2. Configure API keys in Settings (Last.fm, Genius)
-3. Start searching and creating playlists
+## Where the music comes from
 
-See **SETUP_GUIDE.md** for detailed setup and API key instructions.
+| Source | What it gives | Quality |
+|---|---|---|
+| iTunes Search | Metadata, album art, previews | 30-second AAC clips |
+| Internet Archive | Complete tracks — live sets, netlabels, open music | Up to 24-bit FLAC |
+| Radio Browser | Live stations, continuous playback | Up to 320 kbps, some FLAC |
 
-## Deployment
+All three are keyless and send CORS headers, so the page talks to them directly from the browser with no server and no proxy in between.
 
-Deploy to Netlify in 2 minutes:
-1. Go to https://app.netlify.com/start
-2. Click "Connect to Git" → "GitHub"
-3. Select `manuelstoll1234/soundmaschine`
-4. Add API keys to Netlify environment variables
-5. Deploy!
+**On the 30-second previews:** iTunes only serves clips. That is a hard limit of the service, not a setting. For full-length listening use the Radio and Lossless tabs, which stream complete audio.
 
-See **DEPLOYMENT.md** for detailed deployment options.
+## Audio quality
 
-## User Profiles
+Every track is labelled with what it actually is — `24-BIT FLAC`, `FLAC`, `320k MP3`, `PREVIEW`, `LIVE` — rather than promising a quality tier it cannot deliver. The Lossless tab filters the Internet Archive with `format:(Flac)`, so everything listed there is genuinely lossless. FLAC decodes natively in Chrome, Firefox, Edge and Safari 11+.
 
-### Manuel
-- Music genres: Alternative, HardCore, DmB, Reggae
-- Audio quality: Lossless (FLAC, high-resolution)
-- Theme: Dark
+## Profiles
 
-### Maya  
-- Music genres: 80s, Rock, Schlager, Charts
-- Audio quality: High (192-320 kbps)
-- Theme: Light
+Manuel gets Alternative, HardCore, Drum & Bass, Reggae and Dub, with lossless preferred and a VU-meter amber accent. Maya gets 80s, Rock'n'Roll, Schlager and Charts in neon magenta. Each profile keeps its own playlists, history and settings. Switch from the top of the sidebar.
 
-## Architecture
+## Your data
 
-- **Frontend**: Vanilla JavaScript/HTML5/CSS3 (no frameworks)
-- **APIs**: Last.fm, Deezer, YouTube, MusicBrainz, Genius, Internet Archive
-- **Storage**: Browser LocalStorage (100% offline)
-- **Audio**: HTML5 Audio + Web Audio API
-- **Deployment**: Netlify (static hosting)
+Nothing is uploaded anywhere. Playlists, history and settings live in this browser's LocalStorage, per profile. Settings has an Export button that hands you a JSON file. There is no account, no tracking and no analytics.
 
-## Privacy & Data
+## Keyboard
 
-✅ 100% offline capable  
-✅ No account required  
-✅ All data stored locally  
-✅ No tracking or analytics  
-✅ API keys stored securely  
-✅ Listening history private  
+`Space` play/pause · `/` focus search · `Shift+←` / `Shift+→` previous/next
 
-## Browser Support
+## Deploy
 
-- Chrome/Chromium 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-- Mobile browsers (iOS Safari, Chrome Mobile)
+Any static host works — the repo is a single file with no build.
 
-## Next Steps
+**Netlify:** New site → Import from Git → pick this repo. Leave the build command empty and set the publish directory to `.`. No environment variables are needed.
 
-1. Download the **soundmaschine-complete.zip** file
-2. Extract it to your local machine
-3. Copy all files into this repository
-4. Push to GitHub
-5. Deploy to Netlify
+**Netlify Drop:** drag `index.html` onto https://app.netlify.com/drop.
 
-For detailed instructions, see SETUP_GUIDE.md
+**GitHub Pages:** Settings → Pages → deploy from `main` / root.
 
----
+## Known limits
 
-**Enjoy SOUNDMASCHINE! 🎵**  
-Free music streaming with no subscriptions required.
+- iTunes previews are 30 seconds. Nothing can change that.
+- Radio stations that only serve `http://` are filtered out on an `https://` page, because browsers block mixed content. Opening the file locally shows more stations.
+- The spectrum analyser runs on Internet Archive tracks. Radio and preview streams send no CORS headers, and routing those through Web Audio would silence them, so the visualiser animates in sync instead of analysing. Playback reliability wins over a real spectrum.
+
+## Browsers
+
+Chrome/Chromium 90+, Firefox 88+, Safari 14+, Edge 90+, and mobile Safari and Chrome.
