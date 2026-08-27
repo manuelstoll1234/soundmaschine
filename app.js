@@ -479,7 +479,7 @@ var P = {
     if (Drawer.open) Drawer.render();
     this.paint();
     this.history(track);
-    Sugg.schedule();
+    /* Vorschlagstitel entfernt */
   },
   recover: function () {
     var t = this.cur;
@@ -1305,7 +1305,7 @@ function wxChip() {
 
 function paintHomeHero() {
   var host = $('#heroBox');
-  if (!host) return;
+  if (!host) return;   /* Startseite hat keinen Hero mehr */
   var u = U(), t = P.cur, playing = !!t;
   var art, meta;
   if (playing) {
@@ -1344,6 +1344,43 @@ function paintHomeHero() {
 }
 
 var PAGES = {};
+
+/* --- Relevanz. Audius sortiert nach eigenen Kriterien und schiebt gern
+   Entferntes nach oben. Wer "Rancid" tippt, will Rancid zuerst sehen und
+   nicht einen Remix, der das Wort im Albumtitel fuehrt.              --- */
+function relScore(t, q) {
+  var n = function (s) { return String(s == null ? '' : s).toLowerCase().trim(); };
+  q = n(q); if (!q) return 0;
+  var ti = n(t.title), ar = n(t.artist), al = n(t.album);
+  var s = 0;
+  if (ti === q) s += 100;
+  else if (ti.indexOf(q) === 0) s += 70;
+  else if (ti.indexOf(q) >= 0) s += 45;
+  if (ar === q) s += 90;
+  else if (ar.indexOf(q) === 0) s += 60;
+  else if (ar.indexOf(q) >= 0) s += 35;
+  if (al.indexOf(q) >= 0) s += 12;
+  /* jedes Wort der Anfrage, das irgendwo vorkommt, zaehlt mit */
+  var w = q.split(/\s+/).filter(function (x) { return x.length > 2; });
+  var hay = ti + ' ' + ar + ' ' + al;
+  w.forEach(function (x) { if (hay.indexOf(x) >= 0) s += 8; });
+  return s;
+}
+function byRelevance(list, q) {
+  return (list || []).map(function (t, i) { return { t: t, s: relScore(t, q), i: i }; })
+    .sort(function (a, b) { return b.s - a.s || a.i - b.i; })   /* stabil bei Gleichstand */
+    .map(function (x) { return x.t; });
+}
+function topHitCard(t, list, onPlay) {
+  var c = el('div', 'tophit',
+    (t.art ? '<img src="' + esc(t.art) + '" alt="" onerror="this.style.visibility=\'hidden\'">'
+           : '<div class="ph">\u266a</div>') +
+    '<div class="m"><small>Top-Treffer</small><b>' + esc(t.title) + '</b>' +
+    '<span>' + esc([t.artist, t.album && t.album !== t.title ? t.album : ''].filter(Boolean).join(' \u00b7 ')) + '</span></div>');
+  c.onclick = onPlay;
+  return c;
+}
+
 
 /* ============================================================
    BROWSE — Genres, kuratierte Playlists, Radio nach Kategorie
@@ -1452,20 +1489,17 @@ function renderRadioCats(page) {
 }
 
 PAGES.home = function (page) {
-  var hero = el('div', 'hero'); hero.id = 'heroBox';
-  page.appendChild(hero);
-  paintHomeHero();
-
-  renderGenreGrid(page);
-  renderCurated(page);
-  renderRadioCats(page);
-
+  /* Kein Begruessungsfenster mehr. Was laeuft, steht im Mini-Player unten;
+     eine zweite grosse Box in der Seitenmitte waere nur Wiederholung. */
   var hist = Store.get(pkey('hist'), []);
   if (hist.length) {
-    var s = section('Zuletzt gehört');
+    var s = section('Zuletzt geh\u00f6rt');
     s.appendChild(rowsBlock(hist.slice(0, 6)));
     page.appendChild(s);
   }
+  renderGenreGrid(page);
+  renderCurated(page);
+  renderRadioCats(page);
 };
 
 function homeTracks(page, u) {
@@ -1544,6 +1578,10 @@ PAGES.search = function (page) {
   page.appendChild(s1);
   Audius.search(q, 24).then(function (list) {
     b1.innerHTML = '';
+    list = byRelevance(list, q);
+    if (list.length && relScore(list[0], q) >= 45) {
+      b1.appendChild(topHitCard(list[0], list, function () { P.play(list[0], list, 0); }));
+    }
     if (!list.length) { b1.appendChild(emptyBox('◌', 'No tracks found', 'Try the artist name on its own, or a genre like dub, jungle or synthwave.')); return; }
     b1.appendChild(rowsBlock(list));
   });
@@ -1864,6 +1902,49 @@ var NAV = [
   ['settings', '⚙', 'Settings']
 ];
 
+
+/* --- Tab-Bar. Vier Ziele reichen; alles Weitere bleibt in der Seitenleiste
+   hinter dem Menue-Knopf. Mehr als fuenf Tabs wird auf dem Handy zur
+   Trefferuebung.                                                     --- */
+var TABS = [
+  ['home',   '\u2302', 'Start'],
+  ['search', '\u2315', 'Suchen'],
+  ['radio',  '\ud83d\udcfb', 'Radio'],
+  ['library','\u2637', 'Library']
+];
+function renderTabs() {
+  var n = $('#tabbar'); if (!n) return;
+  n.innerHTML = '';
+  TABS.forEach(function (t) {
+    var b = el('button', 'tab' + (App.page === t[0] ? ' on' : ''),
+      '<i>' + t[1] + '</i>' + t[2]);
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', App.page === t[0] ? 'true' : 'false');
+    b.onclick = function () { go(t[0]); closeSide(); };
+    n.appendChild(b);
+  });
+}
+
+/* Suchfeld im Daumenbereich. Nur auf der Suchseite, nur auf dem Handy —
+   gespiegelt auf das bestehende #q, damit die Suchlogik unberuehrt bleibt. */
+function mountSearchBar() {
+  var old = $('.searchbar'); if (old) old.remove();
+  document.body.classList.toggle('searching', App.page === 'search');
+  if (App.page !== 'search') return;
+  var wrap = el('div', 'searchbar');
+  var inp = el('input');
+  inp.type = 'search'; inp.placeholder = 'Titel, Interpret oder Genre';
+  inp.value = App.q || ''; inp.autocomplete = 'off'; inp.spellcheck = false;
+  var t;
+  inp.addEventListener('input', function () {
+    clearTimeout(t);
+    var v = inp.value;
+    t = setTimeout(function () { var f = $('#q'); if (f) f.value = v; doSearch(v); }, 160);
+  });
+  wrap.appendChild(inp);
+  document.body.appendChild(wrap);
+}
+
 function renderNav() {
   var n = $('#nav'); n.innerHTML = '';
   NAV.forEach(function (item) {
@@ -1911,6 +1992,8 @@ function renderFav() {
 function go(p) {
   App.page = p;
   renderNav();
+  renderTabs();
+  mountSearchBar();
   var titles = { home: 'Home', search: 'Search', radio: 'Radio', lossless: 'Lossless', library: 'Library', playlists: 'Playlists', settings: 'Settings', item: 'Album', pl: 'Playlist' };
   var tt = $('#ttl'); if (tt) tt.textContent = titles[p] || 'Home';
   document.title = 'MUSIKMASCHINE · ' + (titles[p] || 'Home');
@@ -1937,7 +2020,7 @@ function doSearch(v) {
 $('#q').addEventListener('input', function () {
   var v = this.value;
   clearTimeout(sT);
-  sT = setTimeout(function () { doSearch(v); }, 420);
+  sT = setTimeout(function () { doSearch(v); }, 160);
 });
 $('#q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(sT); doSearch(this.value); } });
 
@@ -2030,6 +2113,7 @@ var Net = {
 
 renderUser();
 renderPlSidebar();
+renderTabs();
 go('home');
 Net.check();
 (function () {
@@ -2081,7 +2165,7 @@ window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archiv
   });
 })();
 
-Sugg.init();
+/* Sugg.init() entfernt */
 
 (function () {
   var q = $('#q'), x = $('#qClear');
