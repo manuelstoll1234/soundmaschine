@@ -388,6 +388,38 @@ body.hostbadge #vol{margin-bottom:60px}
 }
 /* Auf schmalen Geraeten hat die Suche Vorrang */
 @media (max-width: 620px) { #hdrWx { display: none; } }
+
+/* ===== Korrekturen Layout =====
+
+   1) Menue-Knopf. Unter 880px faehrt #side aus dem Bild und ist nur ueber
+      #menuBtn erreichbar. Der Knopf trug ein inline display:none, das keine
+      CSS-Regel aufheben konnte — damit gab es auf dem Handy weder Nutzer-
+      wechsel noch Navigation. Sichtbarkeit gehoert in die Media Query. */
+#menuBtn { display: none; }
+@media (max-width: 880px) {
+  #menuBtn { display: grid; }
+}
+
+/* 2) Hero-Cover. Gestapelt wurde aus width:100% + aspect-ratio:1 ein
+      bildschirmbreites Quadrat. Auf schmalen Geraeten steht das Bild
+      jetzt links neben dem Text statt darueber. */
+@media (max-width: 600px) {
+  #heroBox {
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  #heroBox .hero-art {
+    width: 88px;
+    height: 88px;
+    aspect-ratio: auto;
+    font-size: 38px;
+    flex: none;
+  }
+  #heroBox .hero-m h2 { font-size: 20px; }
+  #heroBox .hero-m p  { font-size: 13px; }
+}
+
 </style>
 </head>
 <body class="u-maya">
@@ -411,7 +443,7 @@ body.hostbadge #vol{margin-bottom:60px}
       <div class="search-wrap"><input id="q" placeholder="Search…" spellcheck="false" autocomplete="off"><button id="qClear" title="Clear">✕</button></div>
       <div id="hdrWx" aria-live="polite"></div>
       <button class="hdr-btn" id="themeBtn" title="Theme">◑</button>
-      <button class="hdr-btn" id="menuBtn" title="Menu" style="display:none">☰</button>
+      <button class="hdr-btn" id="menuBtn" title="Menü" aria-label="Menü">☰</button>
     </header>
     <div id="page"></div>
   </div>
