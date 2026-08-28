@@ -755,6 +755,26 @@ body {
   width: 3px; height: 3px; margin-left: -1.5px;
   border-radius: 50%; background: currentColor;
 }
+
+/* Eingabefelder in den Einstellungen. Vorher erbten sie nur die Schriftfarbe
+   (weiss) und behielten den weissen Standardhintergrund des Browsers —
+   getippter Text war unsichtbar. Hintergrund gehoert mit gesetzt. */
+.set-row input, .set-row select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg3);
+  color: var(--fg);
+  font-size: 15px;
+  outline: none;
+}
+.set-row input:focus, .set-row select:focus {
+  border-color: var(--accent);
+}
+.set-row input::placeholder { color: var(--fg3); }
+.set-row { gap: 12px; flex-wrap: wrap; }
+.set p a { color: var(--accent); }
 </style>
 </head>
 <body class="u-maya">
