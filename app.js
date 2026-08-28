@@ -588,12 +588,11 @@ var P = {
     document.querySelectorAll('.row').forEach(function (r) {
       r.classList.toggle('playing', !!(t && r.dataset.tid === t.id));
     });
-    if (App.page === 'home') paintHomeHero();
   }
 };
 
 ALL.forEach(function (a) {
-  a.addEventListener('play', function () { if (a === au) P.paint(); });
+  a.addEventListener('play', function () { if (a === au) { P.paint(); Viz.loop(); } });
   a.addEventListener('pause', function () { if (a === au) P.paint(); });
   a.addEventListener('ended', function () {
     if (a !== au) return;
@@ -819,10 +818,17 @@ var Viz = {
     this.w = r.width; this.h = r.height;
   },
   attach: function () { Engine.attach(); this.loop(); },
+  /* Die Schleife laeuft nur, solange es etwas zu zeigen gibt. Vorher lief sie
+     ab dem Laden dauerhaft mit 60 Bildern je Sekunde weiter — auf dem Handy
+     sogar fuer ein Canvas, das per CSS ausgeblendet ist. */
   loop: function () {
     cancelAnimationFrame(this.raf);
     var self = this;
-    (function frame() { self.raf = requestAnimationFrame(frame); self.draw(); })();
+    (function frame() {
+      if (au.paused) { self.draw(); self.raf = 0; return; }
+      self.raf = requestAnimationFrame(frame);
+      self.draw();
+    })();
   },
   freq: function () {
     if (!Engine.ready || Engine.dead || au !== auCors) return null;
@@ -849,6 +855,10 @@ var Viz = {
     return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e8a13a';
   },
   draw: function () {
+    /* Auf dem Handy ist das Canvas per CSS ausgeblendet — dann hat es keine
+       Flaeche und jedes Zeichnen waere verworfene Arbeit. offsetParent taugt
+       dafuer nicht: bei fest positionierten Vorfahren ist es unzuverlaessig. */
+    if (this.cv.clientWidth === 0 && this.cv.clientHeight === 0) return;
     if (!this.ctx) { this.size(); if (!this.ctx) return; }
     var c = this.ctx, w = this.w, h = this.h;
     c.clearRect(0, 0, w, h);
@@ -1137,66 +1147,6 @@ window.addEventListener('resize', function () { Viz.size(); });
 Viz.cv.onclick = function () { Viz.cycle(); };
 Viz.loop();
 
-var Sugg = {
-  el: null, cur: null, timer: 0, pool: [], dismissed: false,
-  init: function () {
-    this.el = $('#sugg'); if (!this.el) return;
-    var self = this;
-    $('#sugX').onclick = function () { self.hide(); self.dismissed = true; };
-    $('#sugGo').onclick = function () {
-      if (!self.cur) return;
-      P.play(self.cur, self.pool, self.pool.indexOf(self.cur));
-      self.hide();
-    };
-    $('#sugNext').onclick = function () { self.pick(); };
-  },
-  reset: function () { this.pool = []; this.cur = null; this.dismissed = false; this.hide(); },
-  schedule: function () {
-    var self = this;
-    clearTimeout(this.timer);
-    if (this.dismissed) return;
-    this.timer = setTimeout(function () { self.build(); }, 25000);
-  },
-  seed: function () {
-    var hist = Store.get(pkey('hist'), []);
-    if (hist.length < 2) return null;
-    var recent = hist.slice(0, 8);
-    var byArtist = {}, byGenre = {};
-    recent.forEach(function (t) {
-      if (t.artist) byArtist[t.artist] = (byArtist[t.artist] || 0) + 1;
-      if (t.album && t.source === 'Audius') byGenre[t.album] = (byGenre[t.album] || 0) + 1;
-    });
-    var topG = Object.keys(byGenre).sort(function (a, b) { return byGenre[b] - byGenre[a]; })[0];
-    var topA = Object.keys(byArtist).sort(function (a, b) { return byArtist[b] - byArtist[a]; })[0];
-    if (topG) return { q: topG, why: 'Weil du ' + topG + ' hörst' };
-    if (topA) return { q: topA, why: 'Ähnlich wie ' + topA };
-    return null;
-  },
-  build: function () {
-    var self = this, sd = this.seed();
-    if (!sd) return;
-    this.why = sd.why;
-    Audius.search(sd.q, 25).then(function (list) {
-      var hist = Store.get(pkey('hist'), []);
-      var heard = {};
-      hist.forEach(function (t) { heard[t.id] = 1; });
-      self.pool = list.filter(function (t) { return !heard[t.id] && (!P.cur || t.id !== P.cur.id); });
-      if (!self.pool.length) return;
-      self.pick();
-    });
-  },
-  pick: function () {
-    if (!this.pool.length) return;
-    var i = Math.floor(Math.random() * this.pool.length);
-    this.cur = this.pool[i];
-    var w = $('#sugg'); if (w) w.title = this.why || 'Vorschlag';
-    $('#sugT').textContent = this.cur.title;
-    $('#sugA').textContent = this.cur.artist + ' · ' + mmss(this.cur.dur);
-    this.show();
-  },
-  show: function () { if (this.el && !this.dismissed) this.el.classList.add('on'); },
-  hide: function () { if (this.el) this.el.classList.remove('on'); }
-};
 
 function likedList() {
   return (playlists().filter(function (p) { return p.id === 'liked'; })[0] || { tracks: [] }).tracks;
@@ -1295,55 +1245,132 @@ function addTo(t) {
   toast('Added to ' + target.name);
 }
 
-function wxChip() {
-  var w = Weather.cache;
-  if (!w) return '<div class="wx" id="wxBox"></div>';
-  return '<div class="wx" id="wxBox" title="' + esc(w.desc + ' · ' + w.place + ', Schweiz') + '">' +
-         '<span class="i">' + w.icon + '</span>' + w.temp + '°' +
-         '<span class="pl">' + esc(w.place) + '</span></div>';
-}
 
-function paintHomeHero() {
-  var host = $('#heroBox');
-  if (!host) return;   /* Startseite hat keinen Hero mehr */
-  var u = U(), t = P.cur, playing = !!t;
-  var art, meta;
-  if (playing) {
-    art = t.art
-      ? '<div class="hero-art"><img src="' + esc(t.art) + '" alt="" onerror="this.parentNode.textContent=\'♪\'"></div>'
-      : '<div class="hero-art">' + (t.live ? '📻' : '♪') + '</div>';
-    var kopf, titel, unten;
-    if (t.live) {
-      kopf  = 'Radiosender · ' + (t.quality || 'LIVE');
-      titel = t.title;
-      unten = [t.country, t.tags].filter(Boolean).join(' · ') || 'Live';
-    } else {
-      kopf  = 'Es läuft · ' + (t.source || 'Audius');
-      titel = t.title;
-      unten = [t.artist, t.album && t.album !== t.title ? t.album : '', t.year || '']
-                .filter(Boolean).join(' · ');
-    }
-    meta = '<div class="hero-m"><small>' + esc(kopf) + '</small>' +
-           '<h2>' + esc(titel) + '</h2>' +
-           '<p>' + esc(unten) + '</p></div>';
-  } else {
-    art = '<div class="hero-art">' + (App.uid === 'maya' ? '✨' : '◈') + '</div>';
-    meta = '<div class="hero-m"><small>' + esc(gruss()) + '</small>' +
-           '<h2>' + esc(u.name) + '</h2>' +
-           '<p>' + esc(u.seeds.slice(0, 3).join(' · ')) + '</p></div>';
-  }
-  host.classList.toggle('np-mode', playing);
-  host.innerHTML = art + meta + wxChip();
-  Weather.get().then(function (w) {
-    var b = $('#wxBox');
-    if (!b || !w) return;
-    b.title = w.desc + ' · ' + w.place + ', Schweiz';
-    b.innerHTML = '<span class="i">' + w.icon + '</span>' + w.temp + '°' +
-                  '<span class="pl">' + esc(w.place) + '</span>';
-  });
-}
 
 var PAGES = {};
+
+/* Seitenkopf. Ohne Cover reiner Text — so beginnen bei Tidal und Spotify
+   die Kategorieseiten. Ein Cover bekommen nur Dinge, die eines haben. */
+function pageHead(eyebrow, title, sub, cover) {
+  var art = '';
+  if (cover) {
+    art = /^https?:|^data:/.test(cover)
+      ? '<div class="cov"><img src="' + esc(cover) + '" alt="" onerror="this.remove()"></div>'
+      : '<div class="cov">' + cover + '</div>';
+  }
+  return el('div', 'ph-head', art +
+    '<div class="m">' +
+    (eyebrow ? '<small>' + esc(eyebrow) + '</small>' : '') +
+    '<h1>' + esc(title) + '</h1>' +
+    (sub ? '<p>' + esc(sub) + '</p>' : '') + '</div>');
+}
+
+
+/* Ein Regal: Ueberschrift plus waagrechte Reihe. onAll ist optional —
+   ohne Ziel wird der "Alle"-Hinweis weggelassen, statt einen Knopf zu
+   zeigen, der nichts tut. */
+function shelf(title, onAll) {
+  var s = el('div', 'shelf');
+  var hd = el('button', 'shelf-hd',
+    '<h2>' + esc(title) + '</h2>' + (onAll ? '<em>Alle</em>' : ''));
+  if (onAll) hd.onclick = onAll; else hd.style.cursor = 'default';
+  var row = el('div', 'shelf-row');
+  s.appendChild(hd); s.appendChild(row);
+  s._row = row;
+  return s;
+}
+function shelfCard(o, onClick) {
+  var c = el('button', 'sc' + (o.round ? ' round' : ''),
+    '<span class="cv">' + (o.art
+      ? '<img loading="lazy" src="' + esc(o.art) + '" alt="" onerror="this.remove()">'
+      : esc(o.icon || '\u266a')) + '</span>' +
+    '<b>' + esc(o.title) + '</b><span>' + esc(o.sub || '') + '</span>');
+  c.onclick = onClick;
+  return c;
+}
+
+
+/* ---- Aus Spotify exportierte Playlists -------------------------------
+   Die Titel selbst liegen bei Spotify und lassen sich hier nicht
+   abspielen. Was die Datei liefert, sind Titel, Interpret und Album —
+   genug, um denselben Song auf Audius zu suchen. Antippen sucht und
+   spielt den besten Treffer; findet sich keiner, sagt die App das.
+
+   Die Liste steht in playlists.json statt in dieser Datei: 3677 Titel
+   wuerden index.html verdreifachen, obwohl sie nur gebraucht werden,
+   wenn jemand den Playlists-Tab oeffnet.                            --- */
+var SPL = {
+  data: null, pending: null,
+  load: function () {
+    if (this.data) return Promise.resolve(this.data);
+    if (this.pending) return this.pending;
+    var self = this;
+    this.pending = getJSON('playlists.json', 15000)
+      .then(function (d) { self.data = d || []; self.pending = null; return self.data; })
+      .catch(function () { self.pending = null; return null; });
+    return this.pending;
+  },
+  byId: function (id) {
+    return (this.data || []).filter(function (p) { return p.id === id; })[0];
+  }
+};
+
+/* Der beste Audius-Treffer fuer einen Spotify-Titel. Interpret zaehlt
+   staerker als der Titel — gleichnamige Songs gibt es reichlich. */
+function matchSp(res, title, artist) {
+  var n = function (s) { return String(s || '').toLowerCase().trim(); };
+  var ti = n(title), ar = n(artist);
+  var best = null, bs = -1;
+  (res || []).forEach(function (t) {
+    var s = 0, tt = n(t.title), ta = n(t.artist);
+    if (tt === ti) s += 60; else if (tt.indexOf(ti) >= 0 || ti.indexOf(tt) >= 0) s += 30;
+    if (ta === ar) s += 80; else if (ta.indexOf(ar) >= 0 || ar.indexOf(ta) >= 0) s += 40;
+    if (s > bs) { bs = s; best = t; }
+  });
+  return bs >= 40 ? best : null;
+}
+
+function playSp(tr) {
+  toast('Suche \u201e' + tr[0] + '\u201c \u2026');
+  Audius.search(tr[1] + ' ' + tr[0], 20).then(function (res) {
+    var hit = matchSp(res, tr[0], tr[1]);
+    if (!hit) {
+      /* zweiter Versuch nur mit dem Titel — manche Uploads fuehren
+         einen abweichenden Interpretennamen */
+      Audius.search(tr[0], 20).then(function (r2) {
+        var h2 = matchSp(r2, tr[0], tr[1]);
+        if (h2) P.play(h2);
+        else toast('Auf Audius nicht gefunden');
+      });
+      return;
+    }
+    P.play(hit);
+  }).catch(function () { toast('Suche fehlgeschlagen'); });
+}
+
+function openSpPlaylist(id) {
+  go('splist');
+  var p = SPL.byId(id), page = $('#page');
+  page.innerHTML = '';
+  if (!p) { page.appendChild(emptyBox('\u25cc', 'Playlist weg', 'Neu laden hilft vielleicht.')); return; }
+  page.appendChild(pageHead('Aus Spotify', p.name, p.n + ' Titel', '\u2630'));
+  var note = el('p', 'muted small',
+    'Antippen sucht denselben Titel auf Audius. Nicht jeder ist dort vorhanden.');
+  note.style.cssText = 'margin:-6px 0 12px;color:var(--fg2);font-size:12px';
+  page.appendChild(note);
+  var wrap = el('div', 'rows');
+  p.t.forEach(function (tr) {
+    var r = el('div', 'row');
+    r.innerHTML = '<div class="r-a"></div>' +
+      '<div class="r-m"><div class="r-t">' + esc(tr[0]) + '</div>' +
+      '<div class="r-s">' + esc([tr[1], tr[2]].filter(Boolean).join(' \u00b7 ')) + '</div></div>' +
+      '<div class="r-q">\u266a</div>';
+    r.onclick = function () { playSp(tr); };
+    wrap.appendChild(r);
+  });
+  page.appendChild(wrap);
+}
+
 
 /* --- Relevanz. Audius sortiert nach eigenen Kriterien und schiebt gern
    Entferntes nach oben. Wer "Rancid" tippt, will Rancid zuerst sehen und
@@ -1425,151 +1452,88 @@ var RADIO_CATS = [
    Genau wie die bestehenden Chips auf der Suchseite. */
 function browseTo(q) { var i = $('#q'); if (i) i.value = q; doSearch(q); }
 
-function renderGenreGrid(page) {
-  var s = section('Stöbern', 'Antippen und loslegen');
-  var grid = el('div', 'genre-grid');
-  GENRES.forEach(function (g) {
-    var b = el('button', 'genre-chip',
-      '<span class="gi">' + g.icon + '</span><span class="gl">' + esc(g.label) + '</span>');
-    b.onclick = function () { browseTo(g.query); };
-    grid.appendChild(b);
-  });
-  s.appendChild(grid);
-  page.appendChild(s);
-}
 
-function renderCurated(page) {
-  var s = section('Sammlungen', 'Fertig zusammengestellt');
-  var grid = el('div', 'pl-grid');
-  CURATED.forEach(function (p) {
-    var c = el('button', 'pl-tile',
-      '<span class="pt-ic">' + p.icon + '</span>' +
-      '<span class="pt-m"><b>' + esc(p.name) + '</b><span>' + esc(p.sub) + '</span></span>');
-    c.onclick = function () { browseTo(p.query); };
-    grid.appendChild(c);
-  });
-  s.appendChild(grid);
-  page.appendChild(s);
-}
 
 /* Jede Kategorie laedt ihre Sender erst beim Aufklappen — sonst waeren das
    ein Dutzend Radio-Browser-Anfragen beim Oeffnen der Startseite. */
-function renderRadioCats(page) {
-  var s = section('Radio', 'Live, laeuft durchgehend');
-  RADIO_CATS.forEach(function (cat) {
-    var wrap = el('div', 'rcat');
-    var head = el('button', 'rcat-h', '<span>' + esc(cat.name) + '</span><em>live</em>');
-    var body = el('div', 'rcat-b');
-    var loaded = false;
-    head.onclick = function () {
-      var open = wrap.classList.toggle('on');
-      if (!open || loaded) return;
-      loaded = true;
-      body.appendChild(loading('Sender werden geprueft...'));
-      Radio.byTag(cat.tag, 8).then(function (list) {
-        body.innerHTML = '';
-        if (!list.length) {
-          loaded = false;
-          body.appendChild(emptyBox('\u25cc', 'Nichts gefunden',
-            'Radio Browser hat fuer \u201e' + esc(cat.tag) + '\u201c nichts ueber HTTPS geliefert.'));
-          return;
-        }
-        var n = head.querySelector('em');
-        if (n) n.textContent = list.length;
-        body.appendChild(rowsBlock(list));
-      }).catch(function () {
-        body.innerHTML = ''; loaded = false;
-        body.appendChild(emptyBox('\u25cc', 'Ladefehler', 'Nochmal antippen.'));
-      });
-    };
-    wrap.appendChild(head); wrap.appendChild(body);
-    s.appendChild(wrap);
-  });
-  page.appendChild(s);
-}
 
 PAGES.home = function (page) {
-  /* Kein Begruessungsfenster mehr. Was laeuft, steht im Mini-Player unten;
-     eine zweite grosse Box in der Seitenmitte waere nur Wiederholung. */
   var hist = Store.get(pkey('hist'), []);
   if (hist.length) {
-    var s = section('Zuletzt geh\u00f6rt');
-    s.appendChild(rowsBlock(hist.slice(0, 6)));
-    page.appendChild(s);
+    var g0 = el('div', 'qt-grid');
+    hist.slice(0, 6).forEach(function (t, i) {
+      var b = el('button', 'qt',
+        '<span class="cv">' + (t.art
+          ? '<img loading="lazy" src="' + esc(t.art) + '" alt="" onerror="this.remove()">'
+          : '\u266a') + '</span><b>' + esc(t.title) + '</b>');
+      b.onclick = function () { P.play(t, hist, i); };
+      g0.appendChild(b);
+    });
+    page.appendChild(g0);
   }
-  renderGenreGrid(page);
-  renderCurated(page);
-  renderRadioCats(page);
+
+  var s1 = shelf('Sammlungen', function () { go('search'); });
+  CURATED.forEach(function (p) {
+    s1._row.appendChild(shelfCard({ title: p.name, sub: p.sub, icon: p.icon },
+      function () { browseTo(p.query); }));
+  });
+  page.appendChild(s1);
+
+  var s2 = shelf('Radio');
+  RADIO_CATS.forEach(function (c) {
+    s2._row.appendChild(shelfCard({ title: c.name, sub: 'Live', icon: '\ud83d\udcfb' },
+      function () { openRadioTag(c); }));
+  });
+  page.appendChild(s2);
+
+  /* Spotify-Regal laedt nach — die Datei wird nur geholt, wenn die
+     Startseite tatsaechlich offen ist. */
+  var s3 = shelf('Deine Spotify-Listen', function () { go('library'); });
+  page.appendChild(s3);
+  SPL.load().then(function (list) {
+    if (!list || !list.length) { s3.remove(); return; }
+    list.slice(0, 14).forEach(function (p) {
+      s3._row.appendChild(shelfCard({ title: p.name, sub: p.n + ' Titel', icon: '\u2630' },
+        function () { openSpPlaylist(p.id); }));
+    });
+  });
 };
 
-function homeTracks(page, u) {
-  u.genres.slice(0, 3).forEach(function (genre) {
-    var s = section(genre, 'Full tracks · Audius');
-    var g = el('div', 'grid'); s.appendChild(g);
-    var ld = loading(); s.appendChild(ld);
-    page.appendChild(s);
-    Audius.trending(genre, 10).then(function (list) {
-      ld.remove();
-      if (!list.length) { g.remove(); s.appendChild(emptyBox('◌', 'Nothing came back', 'Audius returned no tracks for ' + esc(genre) + '.')); return; }
-      list.forEach(function (t, i) {
-        g.appendChild(card({ title: t.title, sub: t.artist, art: t.art, tag: mmss(t.dur) },
-          function () { P.play(t, list, i); }));
-      });
-    });
+/* Radio nach Kategorie als eigene Seite statt Aufklapp-Liste */
+function openRadioTag(cat) {
+  go('radiotag');
+  var page = $('#page'); page.innerHTML = '';
+  page.appendChild(pageHead('Radio', cat.name, 'Live \u00b7 nach Stimmen sortiert'));
+  var host = el('div'); host.appendChild(loading('Sender werden gepr\u00fcft \u2026'));
+  page.appendChild(host);
+  Radio.byTag(cat.tag, 24).then(function (list) {
+    host.innerHTML = '';
+    if (!list.length) {
+      host.appendChild(emptyBox('\u25cc', 'Nichts gefunden',
+        'Radio Browser hat f\u00fcr \u201e' + esc(cat.tag) + '\u201c nichts \u00fcber HTTPS geliefert.'));
+      return;
+    }
+    host.appendChild(rowsBlock(list));
   });
 }
 
-function homeRadio(page, u) {
-  var s = section('Stations for you', 'Live · plays continuously');
-  var b = el('div'); s.appendChild(b); b.appendChild(loading());
-  page.appendChild(s);
-  Promise.all(u.tags.slice(0, 3).map(function (t) { return Radio.byTag(t, 5); }))
-    .then(function (lists) {
-      var seen = {}, all = [];
-      lists.forEach(function (l) {
-        l.forEach(function (st) {
-          var k = st.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
-          if (!seen[k]) { seen[k] = 1; all.push(st); }
-        });
-      });
-      b.innerHTML = '';
-      if (!all.length) { b.appendChild(emptyBox('◌', 'No stations right now', 'Radio Browser returned nothing for your tags.')); return; }
-      all.sort(function (a, b2) { return (b2.bitrate || 0) - (a.bitrate || 0); });
-      b.appendChild(rowsBlock(all.slice(0, 10)));
-    });
-}
 
-function homeArchive(page, u) {
-  var q = u.archive[0];
-  var s = section(App.uid === 'maya' ? 'Rock\'n\'Roll originals' : 'Full albums',
-                  App.uid === 'maya' ? 'Great 78 Project · digitised from the original shellac'
-                                     : 'Internet Archive · complete, often lossless');
-  var g = el('div', 'grid'); s.appendChild(g);
-  var ld = loading(); s.appendChild(ld);
-  page.appendChild(s);
-  Archive.search(q, 10).then(function (items) {
-    ld.remove();
-    if (!items.length) { g.remove(); s.appendChild(emptyBox('◌', 'Nothing found', 'The Archive returned nothing for this shelf.')); return; }
-    items.forEach(function (it) {
-      g.appendChild(card({ title: it.title, sub: it.artist + (it.year ? ' · ' + it.year : ''), art: it.art, icon: '⌗', tag: 'FULL' },
-        function () { openArchive(it); }));
-    });
-  });
-}
+
 
 PAGES.search = function (page) {
   if (!App.q) {
-    page.appendChild(emptyBox('⌕', 'Search everything',
-      'Type an artist, song or genre above. Every result plays in full — ' +
-      '<b>Audius</b> (complete tracks, 320k), <b>Internet Archive</b> (full albums, often lossless) ' +
-      'and <b>Radio Browser</b> (live stations). No clips anywhere.'));
-    var chips = el('div', 'chips');
-    U().seeds.concat(U().tags.slice(0, 4)).forEach(function (g) {
-      var b = el('button', 'chip', esc(g));
-      b.onclick = function () { $('#q').value = g; doSearch(g); };
-      chips.appendChild(b);
+    /* Wie bei Spotify: der leere Suchzustand ist die Genre-Uebersicht,
+       nicht ein Hinweistext. */
+    var s = section('St\u00f6bern');
+    var g = el('div', 'gcat-grid');
+    GENRES.forEach(function (x) {
+      var b = el('button', 'gcat', esc(x.label) + '<i>' + x.icon + '</i>');
+      b.style.background = x.color;
+      b.onclick = function () { browseTo(x.query); };
+      g.appendChild(b);
     });
-    page.appendChild(chips);
+    s.appendChild(g);
+    page.appendChild(s);
     return;
   }
   var q = App.q;
@@ -1608,9 +1572,8 @@ PAGES.search = function (page) {
 };
 
 PAGES.radio = function (page) {
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art">📻</div><div><small>Läuft durchgehend</small>' +
-    '<h2>Radio</h2><p>Feste Sender oben, darunter nach Genre stöbern.</p></div>'));
+  page.appendChild(pageHead('Live', 'Radio',
+    'L\u00e4uft durchgehend. Feste Sender oben, darunter nach Genre st\u00f6bern.'))
   var s1 = section('Deine Sender', 'Direkt anwählbar');
   var grid = el('div', 'stn-grid'); s1.appendChild(grid);
   var ld = loading('Sender werden geprüft…'); s1.appendChild(ld);
@@ -1665,9 +1628,8 @@ PAGES.radio = function (page) {
 };
 
 PAGES.lossless = function (page) {
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art">◈</div><div><small>Audiophile</small><h2>Lossless &amp; full length</h2>' +
-    '<p>Internet Archive collections — live recordings and open music, frequently in FLAC or 24-bit.</p></div>'));
+  page.appendChild(pageHead('Audiophil', 'Lossless',
+    'Internet Archive \u2014 Mitschnitte und freie Musik, h\u00e4ufig in FLAC oder 24 Bit.'))
   var chips = el('div', 'chips'); page.appendChild(chips);
   var host = el('div'); page.appendChild(host);
   function load(term) {
@@ -1695,9 +1657,7 @@ function openArchive(item) {
   go('item');
   var page = $('#page');
   page.innerHTML = '';
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art" style="background:url(' + esc(item.art) + ') center/cover,var(--bg4)"></div>' +
-    '<div><small>Internet Archive</small><h2>' + esc(item.title) + '</h2><p>' + esc(item.artist) + '</p></div>'));
+  page.appendChild(pageHead('Internet Archive', item.title, item.artist, item.art))
   var host = el('div'); host.appendChild(loading('Reading track list…'));
   page.appendChild(host);
   Archive.tracks(item.identifier).then(function (tr) {
@@ -1715,49 +1675,61 @@ function openArchive(item) {
 }
 
 PAGES.library = function (page) {
+  var pls = playlists();
+  var s1 = section('Deine Playlists');
+  var g1 = el('div', 'spl-grid');
+  pls.forEach(function (p) {
+    var b = el('button', 'spl',
+      '<span class="ic">' + (p.id === 'liked' ? '\u2665' : '\u2630') + '</span>' +
+      '<span class="m"><b>' + esc(p.name) + '</b><span>' + p.tracks.length + ' Titel</span></span>');
+    b.onclick = function () { openPlaylist(p.id); };
+    g1.appendChild(b);
+  });
+  var nb = el('button', 'spl',
+    '<span class="ic">\uff0b</span><span class="m"><b>Neue Playlist</b><span>anlegen</span></span>');
+  nb.onclick = function () {
+    var n = prompt('Name der Playlist:'); if (!n) return;
+    var p = playlists(); p.push({ id: 'p' + Date.now(), name: n.trim(), tracks: [] });
+    savePl(p); render();
+  };
+  g1.appendChild(nb);
+  s1.appendChild(g1); page.appendChild(s1);
+
+  var s2 = section('Aus Spotify');
+  var g2 = el('div', 'spl-grid'); s2.appendChild(g2);
+  var ld = loading(); s2.appendChild(ld);
+  page.appendChild(s2);
+  SPL.load().then(function (list) {
+    ld.remove();
+    if (!list || !list.length) {
+      s2.appendChild(emptyBox('\u25cc', 'Nicht geladen', 'playlists.json fehlt.'));
+      return;
+    }
+    list.forEach(function (p) {
+      var b = el('button', 'spl',
+        '<span class="ic">\u2630</span><span class="m"><b>' + esc(p.name) + '</b>' +
+        '<span>' + p.n + ' Titel</span></span>');
+      b.onclick = function () { openSpPlaylist(p.id); };
+      g2.appendChild(b);
+    });
+  });
+
   var hist = Store.get(pkey('hist'), []);
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art">📚</div><div><small>' + esc(U().name) + '</small><h2>Your Library</h2>' +
-    '<p>Everything you have played on this device, newest first.</p></div>'));
-  if (!hist.length) {
-    page.appendChild(emptyBox('◌', 'Nothing here yet', 'Play something and it will show up here. Nothing leaves this browser.'));
-    return;
+  if (hist.length) {
+    var s3 = section('Zuletzt geh\u00f6rt', hist.length + ' Titel');
+    s3.appendChild(rowsBlock(hist));
+    page.appendChild(s3);
   }
-  var s = section('Recently played', hist.length + ' tracks');
-  s.appendChild(rowsBlock(hist));
-  page.appendChild(s);
 };
 
-PAGES.playlists = function (page) {
-  var pls = playlists();
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art">▶</div><div><small>' + esc(U().name) + '</small><h2>Playlists</h2>' +
-    '<p>Saved in this browser for this profile. Export them from Settings.</p></div>'));
-  var nb = el('button', 'btn', '＋ New playlist');
-  nb.style.marginBottom = '18px';
-  nb.onclick = function () {
-    var n = prompt('Playlist name:'); if (!n) return;
-    var p = playlists(); p.push({ id: 'p' + Date.now(), name: n.trim(), tracks: [] }); savePl(p); render();
-  };
-  page.appendChild(nb);
-  var g = el('div', 'grid');
-  pls.forEach(function (p) {
-    g.appendChild(card({
-      title: p.name, sub: p.tracks.length + ' track' + (p.tracks.length === 1 ? '' : 's'),
-      art: p.tracks[0] && p.tracks[0].art, icon: p.id === 'liked' ? '♥' : '≡'
-    }, function () { openPlaylist(p.id); }));
-  });
-  page.appendChild(g);
-};
 
 function openPlaylist(id) {
   go('pl');
   var p = playlists().filter(function (x) { return x.id === id; })[0];
   var page = $('#page'); page.innerHTML = '';
   if (!p) { page.appendChild(emptyBox('◌', 'Playlist gone', 'It may have been deleted.')); return; }
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art">' + (p.id === 'liked' ? '♥' : '≡') + '</div>' +
-    '<div><small>Playlist</small><h2>' + esc(p.name) + '</h2><p>' + p.tracks.length + ' tracks</p></div>'));
+  page.appendChild(pageHead('Playlist', p.name, p.tracks.length + ' Titel',
+    p.id === 'liked' ? '\u2665' : '\u2630'))
   var bar = el('div'); bar.style.cssText = 'display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap';
   if (p.tracks.length) {
     var pb = el('button', 'btn', '▶ Play');
@@ -1794,9 +1766,8 @@ function openPlaylist(id) {
 
 PAGES.settings = function (page) {
   var u = U();
-  page.appendChild(el('div', 'hero',
-    '<div class="hero-art">⚙</div><div><small>' + esc(u.name) + '</small><h2>Settings</h2>' +
-    '<p>Everything is stored in this browser only.</p></div>'));
+  page.appendChild(pageHead(u.name, 'Einstellungen',
+    'Alles wird nur in diesem Browser gespeichert.'))
   var s1 = el('div', 'set');
   s1.innerHTML =
     '<h3>Where the music comes from</h3>' +
@@ -1889,28 +1860,28 @@ PAGES.settings = function (page) {
   page.appendChild(s3);
 };
 
-function dayPart() { var h = new Date().getHours(); return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'; }
 function gruss() { var h = new Date().getHours(); return h < 5 ? 'Gute Nacht' : h < 11 ? 'Guten Morgen' : h < 14 ? 'Guten Tag' : h < 18 ? 'Guten Nachmittag' : 'Guten Abend'; }
 
 var NAV = [
-  ['home', '⌂', 'Home'],
-  ['search', '⌕', 'Search'],
-  ['radio', '📻', 'Radio'],
-  ['lossless', '◈', 'Lossless'],
-  ['library', '📚', 'Library'],
-  ['playlists', '▶', 'Playlists'],
-  ['settings', '⚙', 'Settings']
+  ['home', '\u2302', 'Start'],
+  ['search', '\u2315', 'Suchen'],
+  ['radio', '\ud83d\udcfb', 'Radio'],
+  ['lossless', '\u25c8', 'Lossless'],
+  ['library', '\u2637', 'Bibliothek'],
+  ['settings', '\u2699', 'Einstellungen']
 ];
 
 
 /* --- Tab-Bar. Vier Ziele reichen; alles Weitere bleibt in der Seitenleiste
    hinter dem Menue-Knopf. Mehr als fuenf Tabs wird auf dem Handy zur
    Trefferuebung.                                                     --- */
+/* "Start" ist raus — die App oeffnet ohnehin dort, und ein Tab, der
+   nichts weiter tut als den Startzustand wiederherzustellen, verbraucht
+   nur einen der vier Plaetze. Heim fuehrt jetzt das Logo. */
 var TABS = [
-  ['home',   '\u2302', 'Start'],
-  ['search', '\u2315', 'Suchen'],
-  ['radio',  '\ud83d\udcfb', 'Radio'],
-  ['library','\u2637', 'Library']
+  ['home',    '\u2302', 'Start'],
+  ['search',  '\u2315', 'Suchen'],
+  ['library', '\u2637', 'Bibliothek']
 ];
 function renderTabs() {
   var n = $('#tabbar'); if (!n) return;
@@ -1932,16 +1903,24 @@ function mountSearchBar() {
   document.body.classList.toggle('searching', App.page === 'search');
   if (App.page !== 'search') return;
   var wrap = el('div', 'searchbar');
+  var sb = el('div', 'sb');
   var inp = el('input');
   inp.type = 'search'; inp.placeholder = 'Titel, Interpret oder Genre';
   inp.value = App.q || ''; inp.autocomplete = 'off'; inp.spellcheck = false;
+  inp.setAttribute('enterkeyhint', 'search');
+  var x = el('button', 'sbx', '\u2715');
+  x.hidden = !inp.value;
   var t;
+  function fire(v) { var f = $('#q'); if (f) f.value = v; doSearch(v); }
   inp.addEventListener('input', function () {
     clearTimeout(t);
     var v = inp.value;
-    t = setTimeout(function () { var f = $('#q'); if (f) f.value = v; doSearch(v); }, 160);
+    x.hidden = !v;
+    t = setTimeout(function () { fire(v); }, 160);
   });
-  wrap.appendChild(inp);
+  x.onclick = function () { inp.value = ''; x.hidden = true; fire(''); inp.focus(); };
+  sb.appendChild(inp); sb.appendChild(x);
+  wrap.appendChild(sb);
   document.body.appendChild(wrap);
 }
 
@@ -1994,7 +1973,7 @@ function go(p) {
   renderNav();
   renderTabs();
   mountSearchBar();
-  var titles = { home: 'Home', search: 'Search', radio: 'Radio', lossless: 'Lossless', library: 'Library', playlists: 'Playlists', settings: 'Settings', item: 'Album', pl: 'Playlist' };
+  var titles = { home: 'Home', search: 'Search', radio: 'Radio', lossless: 'Lossless', library: 'Bibliothek', settings: 'Settings', item: 'Album', pl: 'Playlist', splist: 'Playlist', radiotag: 'Radio' };
   var tt = $('#ttl'); if (tt) tt.textContent = titles[p] || 'Home';
   document.title = 'MUSIKMASCHINE · ' + (titles[p] || 'Home');
   if (PAGES[p]) render();
@@ -2037,7 +2016,6 @@ function renderUser() {
       if (k === App.uid) return;
       App.uid = k; Store.set('user', k);
       renderUser(); renderPlSidebar(); renderFav(); go('home');
-      Sugg.reset();
       toast('Jetzt ' + x.name);
     };
     seg.appendChild(b);
@@ -2121,7 +2099,7 @@ Net.check();
   render = function () { origRender(); if (Net.blocked) Net.banner(); };
 })();
 window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archive: Archive,
-              Viz: Viz, Net: Net, Sugg: Sugg, isLiked: isLiked, toggleLike: toggleLike,
+              Viz: Viz, Net: Net, isLiked: isLiked, toggleLike: toggleLike,
               Engine: Engine, Drawer: Drawer, Ambilight: Ambilight, Palette: Palette, MB: MB };
 
 (function () {
@@ -2151,7 +2129,8 @@ window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archiv
 (function () {
   var hl = $('#hdrLogo'), src0 = document.querySelector('.logo-amp img');
   if (hl && src0) { hl.src = src0.src; hl.style.cursor = 'pointer';
-    hl.onclick = function () { var g = $('#logoBig'); if (g) { g.querySelector('img').src = src0.src; g.classList.add('on'); } }; }
+    hl.title = 'Startseite';
+    hl.onclick = function () { go('home'); closeSide(); }; }
 })();
 
 (function () {
@@ -2165,7 +2144,6 @@ window.SM = { App: App, P: P, Store: Store, Audius: Audius, Radio: Radio, Archiv
   });
 })();
 
-/* Sugg.init() entfernt */
 
 (function () {
   var q = $('#q'), x = $('#qClear');
