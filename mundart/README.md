@@ -10,6 +10,10 @@ Ablauf: Push-to-Talk → STT (Schweizerdeutsch) → Claude antwortet in der gew�
 - Push-to-Talk «Halten» oder «Tippen» (Auto), Leertaste, Texteingabe als Alternative
 - API-Schlüssel nur über die Einstellungen (nur Tab oder optional auf dem Gerät gespeichert), nie im Code
 
+## Öffnen
+
+`index.html` ist eine eigenständige, fertig gebaute Seite (React und CSS eingebettet, kein CDN). Über HTTPS ausliefern, z. B. mit Netlify unter `/mundart/`. Nach Änderungen an der JSX-Datei `./build.sh` ausführen.
+
 ## Einbinden
 
 Als Komponente in ein React-Projekt mit Tailwind (v3) importieren, z. B. Vite:
